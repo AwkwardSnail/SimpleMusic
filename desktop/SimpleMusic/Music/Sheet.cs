@@ -12,6 +12,13 @@ public sealed class Note
     public int Step { get; set; } = Theory.B4;
     public int Acc { get; set; }   // -1 flat, 0 none, 1 sharp
 
+    // The words sung on this note. A trailing "-" means the word carries on
+    // to the next note (drawn as a hyphen between the two).
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Lyric { get; set; }
+
+    public const int MaxLyric = 60;
+
     [JsonIgnore] public int Ticks => Theory.Ticks(Dur, Dot);
 
     public Note Clone() => (Note)MemberwiseClone();
@@ -21,7 +28,10 @@ public sealed class Note
 public sealed class Sheet
 {
     public string Title { get; set; } = "";
-    public string Lyrics { get; set; } = "";   // free text, not tied to the notes
+    // Lyrics used to be one free text; older files are converted to one
+    // syllable per note when they are opened (see Sanitize).
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Lyrics { get; set; }
     public List<Note> Notes { get; set; } = new();
     public bool Barred { get; set; }
     public int Beats { get; set; } = 4;
@@ -44,14 +54,40 @@ public sealed class Sheet
         {
             if (n.Dur == Dur.S) n.Dot = false;
             n.Acc = Math.Clamp(n.Acc, -1, 1);
+            n.Lyric = n.Rest ? null : CleanLyric(n.Lyric);
         }
         Beats = Math.Clamp(Beats, 1, 16);
         if (!Theory.BeatChoices.Contains(BeatTicks)) BeatTicks = 8;
         Tempo = Math.Clamp(Tempo, 40, 200);
         Title ??= "";
         if (Title.Length > 120) Title = Title[..120];
-        Lyrics ??= "";
-        if (Lyrics.Length > 20000) Lyrics = Lyrics[..20000];
+        if (!string.IsNullOrWhiteSpace(Lyrics) && Notes.All(n => n.Lyric == null)) SpreadOldLyrics(Lyrics);
+        Lyrics = null;
+    }
+
+    public static string? CleanLyric(string? text)
+    {
+        if (text == null) return null;
+        text = new string(text.Where(c => c >= ' ' && c != '').ToArray());
+        if (text.Length > Note.MaxLyric) text = text[..Note.MaxLyric];
+        return text.Trim().Length == 0 ? null : text;
+    }
+
+    // Old free-text lyrics: one syllable per sung note, words split at hyphens
+    // ("Twin-kle" -> "Twin-", "kle"). Anything left over goes on the last note.
+    void SpreadOldLyrics(string text)
+    {
+        var syllables = new List<string>();
+        foreach (var word in text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = word.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < parts.Length; i++) syllables.Add(i < parts.Length - 1 ? parts[i] + "-" : parts[i]);
+        }
+        var sung = Notes.Where(n => !n.Rest).ToList();
+        if (sung.Count == 0) return;
+        for (int i = 0; i < Math.Min(sung.Count, syllables.Count); i++) sung[i].Lyric = CleanLyric(syllables[i]);
+        if (syllables.Count > sung.Count)
+            sung[^1].Lyric = CleanLyric(string.Join(" ", syllables.Skip(sung.Count - 1)).Replace("- ", "-"));
     }
 }
 

@@ -15,7 +15,7 @@ public sealed class ScoreRenderOptions
     public int? SelectedId;
     public int? PlayingId;
     public (int Sys, double X)? Caret;
-    public int? LyricEditSys;   // the staff whose lyrics are being typed (no placeholder there)
+    public int? LyricEditId;    // the note whose lyric is being typed (its room is outlined)
     public bool Print;   // leave out everything that only makes sense on screen
 }
 
@@ -87,24 +87,8 @@ public static class ScoreRenderer
             }
         }
 
-        foreach (var lyric in L.Lyrics)
-        {
-            foreach (var w in lyric.Words)
-                ops.Add(Fill(MusicShapes.Text(w.Text, Metrics.LyricFont, FontWeights.Normal, FontStyles.Normal,
-                    Metrics.LyricSize, w.X, lyric.Baseline), Role.Ink));
-        }
-
+        LyricOps(L, o, ops);
         if (o.Print) return ops;
-
-        // A faint hint under every staff that has no words yet.
-        for (int s = 0; s < L.Lines.Count; s++)
-        {
-            bool hasWords = s < L.Lyrics.Count && L.Lyrics[s].Words.Count > 0;
-            if (hasWords || o.LyricEditSys == s) continue;
-            var ln = L.Lines[s];
-            ops.Add(Fill(MusicShapes.Text("lyrics here", Metrics.LyricFont, FontWeights.Normal, FontStyles.Italic,
-                Metrics.LyricSize, ln.Left, ln.LyricBaseline), Role.Placeholder));
-        }
 
         if (sheet.Notes.Count == 0)
         {
@@ -118,6 +102,50 @@ public static class ScoreRenderer
             ops.Add(Stroke(MusicShapes.Line(c.X, t - 8, c.X, t + 48), Role.Caret, 2));
         }
         return ops;
+    }
+
+    static Geometry LyricText(string text, double x, double baseline, double scale)
+    {
+        var g = MusicShapes.Text(text, Metrics.LyricFont, FontWeights.Normal, FontStyles.Normal, Metrics.LyricSize, x, baseline);
+        if (scale >= 0.999) return g;
+        var squeezed = new GeometryGroup { Children = { g }, Transform = new ScaleTransform(scale, 1, x, baseline) };
+        squeezed.Freeze();
+        return squeezed;
+    }
+
+    // Each lyric centred under its note; a word that carries on gets a hyphen
+    // halfway to the next note's words.
+    static void LyricOps(ScoreLayout L, ScoreRenderOptions o, List<DrawOp> ops)
+    {
+        foreach (var s in L.Lyrics)
+        {
+            bool editing = !o.Print && o.LyricEditId == s.Note.Id;
+            if (editing)
+            {
+                // The room this lyric has, as a faint box.
+                double room = ScoreLayout.RoomHalf(s);
+                ops.Add(Stroke(MusicShapes.Rect(s.Cx - room, s.Baseline - 15, room * 2, 21, 3), Role.Placeholder, 1));
+            }
+            if (s.Text.Length == 0)
+            {
+                // An empty lyric: a faint short line under the note, on screen only.
+                if (!o.Print && !editing)
+                    ops.Add(Stroke(MusicShapes.Line(s.Cx - 6, s.Baseline + 2, s.Cx + 6, s.Baseline + 2), Role.Placeholder, 1.2));
+                continue;
+            }
+            var (left, scale, half) = ScoreLayout.LyricPlacement(s);
+            if (s.Body.Length > 0) ops.Add(Fill(LyricText(s.Body, left, s.Baseline, scale), Role.Ink));
+            if (!s.Hyphen) continue;
+
+            double hw = ScoreLayout.LyricWidth("-");
+            double from = s.Cx + half, x = from;
+            if (s.Next is { } n && !editing)
+            {
+                double to = n.Cx - (n.Text.Length > 0 ? ScoreLayout.LyricPlacement(n).Half : 0);
+                if (to - from > hw + 4) x = (from + to - hw) / 2;
+            }
+            ops.Add(Fill(LyricText("-", x, s.Baseline, 1), Role.Ink));
+        }
     }
 
     static Role ItemRole(Item it, ScoreRenderOptions o)

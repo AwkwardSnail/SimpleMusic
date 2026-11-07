@@ -1,351 +1,392 @@
 {
-  "App": "SimpleMusic",
-  "FormatVersion": 1,
-  "Sheet": {
-    "Title": "Twinkle, Twinkle, Little Star",
-    "Lyrics": "Twinkle, twinkle, little star, how I wonder what you are! Up above the world so high, like a diamond in the sky. Twinkle, twinkle, little star, how I wonder what you are!",
-    "Notes": [
-      {
-        "Id": 1,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 28,
-        "Acc": 0
-      },
-      {
-        "Id": 2,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 28,
-        "Acc": 0
-      },
-      {
-        "Id": 3,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 4,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 5,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 33,
-        "Acc": 0
-      },
-      {
-        "Id": 6,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 33,
-        "Acc": 0
-      },
-      {
-        "Id": 7,
-        "Rest": false,
-        "Dur": "H",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 8,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 31,
-        "Acc": 0
-      },
-      {
-        "Id": 9,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 31,
-        "Acc": 0
-      },
-      {
-        "Id": 10,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 30,
-        "Acc": 0
-      },
-      {
-        "Id": 11,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 30,
-        "Acc": 0
-      },
-      {
-        "Id": 12,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 29,
-        "Acc": 0
-      },
-      {
-        "Id": 13,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 29,
-        "Acc": 0
-      },
-      {
-        "Id": 14,
-        "Rest": false,
-        "Dur": "H",
-        "Dot": false,
-        "Step": 28,
-        "Acc": 0
-      },
-      {
-        "Id": 15,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 16,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 17,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 31,
-        "Acc": 0
-      },
-      {
-        "Id": 18,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 31,
-        "Acc": 0
-      },
-      {
-        "Id": 19,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 30,
-        "Acc": 0
-      },
-      {
-        "Id": 20,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 30,
-        "Acc": 0
-      },
-      {
-        "Id": 21,
-        "Rest": false,
-        "Dur": "H",
-        "Dot": false,
-        "Step": 29,
-        "Acc": 0
-      },
-      {
-        "Id": 22,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 23,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 24,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 31,
-        "Acc": 0
-      },
-      {
-        "Id": 25,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 31,
-        "Acc": 0
-      },
-      {
-        "Id": 26,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 30,
-        "Acc": 0
-      },
-      {
-        "Id": 27,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 30,
-        "Acc": 0
-      },
-      {
-        "Id": 28,
-        "Rest": false,
-        "Dur": "H",
-        "Dot": false,
-        "Step": 29,
-        "Acc": 0
-      },
-      {
-        "Id": 29,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 28,
-        "Acc": 0
-      },
-      {
-        "Id": 30,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 28,
-        "Acc": 0
-      },
-      {
-        "Id": 31,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 32,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 33,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 33,
-        "Acc": 0
-      },
-      {
-        "Id": 34,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 33,
-        "Acc": 0
-      },
-      {
-        "Id": 35,
-        "Rest": false,
-        "Dur": "H",
-        "Dot": false,
-        "Step": 32,
-        "Acc": 0
-      },
-      {
-        "Id": 36,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 31,
-        "Acc": 0
-      },
-      {
-        "Id": 37,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 31,
-        "Acc": 0
-      },
-      {
-        "Id": 38,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 30,
-        "Acc": 0
-      },
-      {
-        "Id": 39,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 30,
-        "Acc": 0
-      },
-      {
-        "Id": 40,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 29,
-        "Acc": 0
-      },
-      {
-        "Id": 41,
-        "Rest": false,
-        "Dur": "Q",
-        "Dot": false,
-        "Step": 29,
-        "Acc": 0
-      },
-      {
-        "Id": 42,
-        "Rest": false,
-        "Dur": "H",
-        "Dot": false,
-        "Step": 28,
-        "Acc": 0
-      }
-    ],
-    "Barred": true,
-    "Beats": 4,
-    "BeatTicks": 8,
-    "FillLast": true,
-    "Tempo": 100
-  }
+    "App":  "SimpleMusic",
+    "FormatVersion":  1,
+    "Sheet":  {
+                  "Title":  "Twinkle, Twinkle, Little Star",
+                  "Notes":  [
+                                {
+                                    "Id":  1,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  28,
+                                    "Acc":  0,
+                                    "Lyric":  "Twin-"
+                                },
+                                {
+                                    "Id":  2,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  28,
+                                    "Acc":  0,
+                                    "Lyric":  "kle,"
+                                },
+                                {
+                                    "Id":  3,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "twin-"
+                                },
+                                {
+                                    "Id":  4,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "kle,"
+                                },
+                                {
+                                    "Id":  5,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  33,
+                                    "Acc":  0,
+                                    "Lyric":  "lit-"
+                                },
+                                {
+                                    "Id":  6,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  33,
+                                    "Acc":  0,
+                                    "Lyric":  "tle"
+                                },
+                                {
+                                    "Id":  7,
+                                    "Rest":  false,
+                                    "Dur":  "H",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "star,"
+                                },
+                                {
+                                    "Id":  8,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  31,
+                                    "Acc":  0,
+                                    "Lyric":  "how"
+                                },
+                                {
+                                    "Id":  9,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  31,
+                                    "Acc":  0,
+                                    "Lyric":  "I"
+                                },
+                                {
+                                    "Id":  10,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  30,
+                                    "Acc":  0,
+                                    "Lyric":  "won-"
+                                },
+                                {
+                                    "Id":  11,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  30,
+                                    "Acc":  0,
+                                    "Lyric":  "der"
+                                },
+                                {
+                                    "Id":  12,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  29,
+                                    "Acc":  0,
+                                    "Lyric":  "what"
+                                },
+                                {
+                                    "Id":  13,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  29,
+                                    "Acc":  0,
+                                    "Lyric":  "you"
+                                },
+                                {
+                                    "Id":  14,
+                                    "Rest":  false,
+                                    "Dur":  "H",
+                                    "Dot":  false,
+                                    "Step":  28,
+                                    "Acc":  0,
+                                    "Lyric":  "are!"
+                                },
+                                {
+                                    "Id":  15,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "Up"
+                                },
+                                {
+                                    "Id":  16,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "a-"
+                                },
+                                {
+                                    "Id":  17,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  31,
+                                    "Acc":  0,
+                                    "Lyric":  "bove"
+                                },
+                                {
+                                    "Id":  18,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  31,
+                                    "Acc":  0,
+                                    "Lyric":  "the"
+                                },
+                                {
+                                    "Id":  19,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  30,
+                                    "Acc":  0,
+                                    "Lyric":  "world"
+                                },
+                                {
+                                    "Id":  20,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  30,
+                                    "Acc":  0,
+                                    "Lyric":  "so"
+                                },
+                                {
+                                    "Id":  21,
+                                    "Rest":  false,
+                                    "Dur":  "H",
+                                    "Dot":  false,
+                                    "Step":  29,
+                                    "Acc":  0,
+                                    "Lyric":  "high,"
+                                },
+                                {
+                                    "Id":  22,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "like"
+                                },
+                                {
+                                    "Id":  23,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "a"
+                                },
+                                {
+                                    "Id":  24,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  31,
+                                    "Acc":  0,
+                                    "Lyric":  "dia-"
+                                },
+                                {
+                                    "Id":  25,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  31,
+                                    "Acc":  0,
+                                    "Lyric":  "mond"
+                                },
+                                {
+                                    "Id":  26,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  30,
+                                    "Acc":  0,
+                                    "Lyric":  "in"
+                                },
+                                {
+                                    "Id":  27,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  30,
+                                    "Acc":  0,
+                                    "Lyric":  "the"
+                                },
+                                {
+                                    "Id":  28,
+                                    "Rest":  false,
+                                    "Dur":  "H",
+                                    "Dot":  false,
+                                    "Step":  29,
+                                    "Acc":  0,
+                                    "Lyric":  "sky."
+                                },
+                                {
+                                    "Id":  29,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  28,
+                                    "Acc":  0,
+                                    "Lyric":  "Twin-"
+                                },
+                                {
+                                    "Id":  30,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  28,
+                                    "Acc":  0,
+                                    "Lyric":  "kle,"
+                                },
+                                {
+                                    "Id":  31,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "twin-"
+                                },
+                                {
+                                    "Id":  32,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "kle,"
+                                },
+                                {
+                                    "Id":  33,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  33,
+                                    "Acc":  0,
+                                    "Lyric":  "lit-"
+                                },
+                                {
+                                    "Id":  34,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  33,
+                                    "Acc":  0,
+                                    "Lyric":  "tle"
+                                },
+                                {
+                                    "Id":  35,
+                                    "Rest":  false,
+                                    "Dur":  "H",
+                                    "Dot":  false,
+                                    "Step":  32,
+                                    "Acc":  0,
+                                    "Lyric":  "star,"
+                                },
+                                {
+                                    "Id":  36,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  31,
+                                    "Acc":  0,
+                                    "Lyric":  "how"
+                                },
+                                {
+                                    "Id":  37,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  31,
+                                    "Acc":  0,
+                                    "Lyric":  "I"
+                                },
+                                {
+                                    "Id":  38,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  30,
+                                    "Acc":  0,
+                                    "Lyric":  "won-"
+                                },
+                                {
+                                    "Id":  39,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  30,
+                                    "Acc":  0,
+                                    "Lyric":  "der"
+                                },
+                                {
+                                    "Id":  40,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  29,
+                                    "Acc":  0,
+                                    "Lyric":  "what"
+                                },
+                                {
+                                    "Id":  41,
+                                    "Rest":  false,
+                                    "Dur":  "Q",
+                                    "Dot":  false,
+                                    "Step":  29,
+                                    "Acc":  0,
+                                    "Lyric":  "you"
+                                },
+                                {
+                                    "Id":  42,
+                                    "Rest":  false,
+                                    "Dur":  "H",
+                                    "Dot":  false,
+                                    "Step":  28,
+                                    "Acc":  0,
+                                    "Lyric":  "are!"
+                                }
+                            ],
+                  "Barred":  true,
+                  "Beats":  4,
+                  "BeatTicks":  8,
+                  "FillLast":  true,
+                  "Tempo":  100
+              }
 }

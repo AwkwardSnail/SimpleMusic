@@ -36,8 +36,6 @@ public static class MidiExporter
             int clocksPerBeat = sheet.BeatTicks * 3;                         // 24 MIDI clocks = one quarter
             Meta(0x58, new[] { (byte)num, (byte)Math.Log2(den), (byte)clocksPerBeat, (byte)8 });
         }
-        if (!string.IsNullOrWhiteSpace(sheet.Lyrics))
-            Meta(0x01, Encoding.UTF8.GetBytes(sheet.Lyrics.Trim()));         // lyrics as a text note
 
         track.AddRange(new byte[] { 0, 0xC0, 0 });                           // acoustic grand piano
 
@@ -47,6 +45,16 @@ public static class MidiExporter
             int length = n.Ticks * PerTick;
             if (n.Rest) { wait += length; continue; }
             byte key = (byte)Math.Clamp(Theory.Midi(n.Step, n.Acc), 0, 127);
+            if (n.Lyric != null)
+            {
+                // The note's lyric as a lyric event, just before the note sounds.
+                var words = Encoding.UTF8.GetBytes(n.Lyric.EndsWith('-') ? n.Lyric : n.Lyric + " ");
+                track.AddRange(VarLen(wait));
+                track.AddRange(new byte[] { 0xFF, 0x05 });
+                track.AddRange(VarLen(words.Length));
+                track.AddRange(words);
+                wait = 0;
+            }
             track.AddRange(VarLen(wait));
             track.AddRange(new byte[] { 0x90, key, Velocity });
             track.AddRange(VarLen(length));

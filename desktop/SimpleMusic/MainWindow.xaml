@@ -30,7 +30,7 @@
               ← →   move between notes<LineBreak/>
               +  sharp     −  flat<LineBreak/>
               Delete / Backspace   remove a note<LineBreak/>
-              Click under a staff   type lyrics there (Enter = next staff, Esc = back to notes)<LineBreak/>
+              Click under a note   type its lyric (Tab = next note, Esc = back to notes)<LineBreak/>
               Esc   deselect<LineBreak/>
               Space   play / stop<LineBreak/>
               Ctrl+Z / Ctrl+Y   undo / redo<LineBreak/>

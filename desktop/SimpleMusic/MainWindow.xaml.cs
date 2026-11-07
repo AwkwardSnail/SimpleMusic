@@ -251,11 +251,11 @@ public partial class MainWindow : Window
         if (Score.IsEditingLyrics)
         {
             Bold("Typing lyrics");
-            T(" · Enter moves to the next staff · Esc goes back to writing notes");
+            T(" · Tab moves to the next note · Esc goes back to writing notes");
             return;
         }
         int n = Sheet.Notes.Count;
-        if (n == 0) { T("Empty sheet. Choose a note length above, then click on the staff. Click under the staff to add lyrics."); return; }
+        if (n == 0) { T("Empty sheet. Choose a note length above, then click on the staff. Click under a note to add its lyric."); return; }
         double beats = Sheet.Notes.Sum(x => x.Ticks) / (double)Sheet.BeatTicks;
         if (!Sheet.Barred)
         {

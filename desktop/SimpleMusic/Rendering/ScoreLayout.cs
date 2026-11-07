@@ -79,22 +79,27 @@ public sealed class Beam
     public double YAt(double x) => B + Slope * (x - X0);
 }
 
-public sealed record LyricWord(string Text, int Start, double X, double Width);
-
-// The lyrics under one staff: which part of the text it shows and where each word is.
-public sealed class LyricLine
+// The lyric under one sung note. Its text is centred on the note and may
+// reach out until it meets the next note's words (or note head) or the staff end.
+public sealed class LyricSlot
 {
-    public int Sys, Start, End;
-    public double Baseline, Left;
-    public List<LyricWord> Words { get; } = new();
+    public required Note Note;
+    public int Sys;
+    public double Cx, Baseline;
+    public double Min, Max;              // the staff's ends
+    public LyricSlot? Prev, Next;        // sung neighbours on the same staff
+
+    public string Text => Note.Lyric ?? "";
+    // A trailing hyphen is drawn between this note and the next, not after the word.
+    public bool Hyphen => Text.EndsWith('-') && Text.Length > 1;
+    public string Body => Hyphen ? Text[..^1] : Text;
 }
 
 public sealed class ScoreLayout
 {
     public double Width, Height;
     public double SysH = Metrics.SysH;    // taller when there is room for lyrics
-    public double Space;                  // width of a space in the lyric font
-    public List<LyricLine> Lyrics { get; } = new();
+    public List<LyricSlot> Lyrics { get; } = new();
     public List<Line> Lines { get; } = new();
     public List<Item> Items { get; } = new();
     public List<Barline> Barlines { get; } = new();
@@ -130,13 +135,7 @@ public sealed class ScoreLayout
             line.Natural += uw;
         }
         int musicLines = L.Lines.Count;
-
-        // Lyrics flow from staff to staff; if they need more staves than the
-        // music has, empty staves are added to carry them.
-        L.Space = MusicShapes.TextWidth(" ", Metrics.LyricFont, Metrics.LyricSize);
-        var rows = WrapLyrics(sheet.Lyrics, sys => right - LeftOf(sys), L.Space);
-        while (L.Lines.Count < rows.Count) NewLine();
-        if (roomForLyrics || !string.IsNullOrWhiteSpace(sheet.Lyrics)) L.SysH = Metrics.SysH + Metrics.LyricExtra;
+        if (roomForLyrics || sheet.Notes.Any(n => !n.Rest && n.Lyric != null)) L.SysH = Metrics.SysH + Metrics.LyricExtra;
 
         for (int s = 0; s < L.Lines.Count; s++)
         {
@@ -182,29 +181,18 @@ public sealed class ScoreLayout
         foreach (var ln in L.Lines)
             ln.LyricBaseline = Math.Max(ln.StaffTop + Metrics.LyricBaseline, LowestInk(L, L.Lines.IndexOf(ln)) + 16);
 
-        for (int s = 0; s < rows.Count; s++)
+        LyricSlot? prev = null;
+        foreach (var it in L.Items)
         {
-            var row = rows[s];
-            var ln = L.Lines[s];
-            double avail = right - ln.Left;
-            // Lines that wrapped are spread across the staff. Lines that end where the
-            // text ends or breaks keep the spaces exactly as typed, so spaces can be
-            // used to line words up under notes.
-            bool justify = !row.EndsParagraph && row.Words.Count > 1;
-            double lead = row.Words.Count > 0 ? L.Space * (row.Words[0].Start - row.Start) : 0;
-            double gap = justify ? (avail - lead - row.Words.Sum(w => w.Width)) / (row.Words.Count - 1) : 0;
-            var lyric = new LyricLine { Sys = s, Baseline = ln.LyricBaseline, Left = ln.Left, Start = row.Start, End = row.End };
-            double x = ln.Left;
-            int prevEnd = row.Start;
-            for (int i = 0; i < row.Words.Count; i++)
+            if (it.Rest || !it.First || it.Note == null) continue;
+            var slot = new LyricSlot
             {
-                var w = row.Words[i];
-                x += i == 0 || !justify ? L.Space * (w.Start - prevEnd) : gap;
-                lyric.Words.Add(new LyricWord(sheet.Lyrics.Substring(w.Start, w.Length), w.Start, x, w.Width));
-                x += w.Width;
-                prevEnd = w.Start + w.Length;
-            }
-            L.Lyrics.Add(lyric);
+                Note = it.Note, Sys = it.Sys, Cx = it.Cx, Baseline = L.Lines[it.Sys].LyricBaseline,
+                Min = Metrics.StaffX, Max = right,
+            };
+            if (prev != null && prev.Sys == slot.Sys) { slot.Prev = prev; prev.Next = slot; }
+            L.Lyrics.Add(slot);
+            prev = slot;
         }
 
         L.Height = Metrics.PadTop + L.Lines.Count * L.SysH;
@@ -228,118 +216,65 @@ public sealed class ScoreLayout
         return lowest;
     }
 
-    sealed record WordSpan(int Start, int Length, double Width);
-    sealed record LyricRow(int Start, int End, List<WordSpan> Words, bool EndsParagraph);
+    /* ------------------------- Lyric room under each note ------------------------- */
 
-    // Splits the lyrics into one row per staff, remembering where each word
-    // sits in the text. Each line break starts a new staff; long lines wrap
-    // onto the next staff.
-    static List<LyricRow> WrapLyrics(string text, Func<int, double> widthOf, double space)
+    const double Gap = 9;          // between neighbouring words
+    const double HeadClear = 7;    // an empty neighbour still keeps its note head clear
+
+    public static double LyricWidth(string s) =>
+        s.Length == 0 ? 0 : MusicShapes.TextWidth(s, Metrics.LyricFont, Metrics.LyricSize);
+
+    // How far a lyric may reach to each side of its note. Each neighbour keeps
+    // the room its own words need (up to half the distance between the notes),
+    // so two neighbouring lyrics never run into each other.
+    public static double RoomHalf(LyricSlot s)
     {
-        var rows = new List<LyricRow>();
-        int pos = 0;
-        while (true)
-        {
-            int nl = text.IndexOf('\n', pos);
-            int paraEnd = nl < 0 ? text.Length : nl;
-
-            var words = new List<WordSpan>();
-            for (int j = pos; j < paraEnd;)
-            {
-                if (char.IsWhiteSpace(text[j])) { j++; continue; }
-                int k = j;
-                while (k < paraEnd && !char.IsWhiteSpace(text[k])) k++;
-                words.Add(new WordSpan(j, k - j, MusicShapes.TextWidth(text[j..k], Metrics.LyricFont, Metrics.LyricSize)));
-                j = k;
-            }
-
-            if (words.Count == 0) rows.Add(new LyricRow(pos, paraEnd, words, true));
-            int w = 0, rowStart = pos;
-            while (w < words.Count)
-            {
-                double avail = widthOf(rows.Count);
-                var row = new List<WordSpan>();
-                double used = 0;
-                int prevEnd = rowStart;
-                while (w < words.Count)
-                {
-                    // Every typed space counts, so lined-up lyrics wrap where they really end.
-                    double need = used + space * (words[w].Start - prevEnd) + words[w].Width;
-                    if (row.Count > 0 && need > avail) break;
-                    row.Add(words[w]);
-                    used = need;
-                    prevEnd = words[w].Start + words[w].Length;
-                    w++;
-                }
-                bool last = w == words.Count;
-                rows.Add(new LyricRow(rowStart, last ? paraEnd : row[^1].Start + row[^1].Length, row, last));
-                if (!last) rowStart = words[w].Start;
-            }
-
-            if (nl < 0) break;
-            pos = nl + 1;
-        }
-        return rows;
+        static double Occupied(LyricSlot n, double d) => Math.Max(HeadClear, Math.Min(LyricWidth(n.Body) / 2, d / 2));
+        double left = s.Prev is { } p ? s.Cx - p.Cx - Occupied(p, s.Cx - p.Cx) - Gap : s.Cx - s.Min;
+        double right = s.Next is { } n ? n.Cx - s.Cx - Occupied(n, n.Cx - s.Cx) - Gap : s.Max - s.Cx;
+        return Math.Max(4, Math.Min(left, right));
     }
 
-    /* -------------------- Lyric cursor (typing on the score) -------------------- */
-
-    static double PrefixWidth(LyricWord w, int chars) =>
-        chars <= 0 ? 0 : chars >= w.Text.Length ? w.Width : MusicShapes.TextWidth(w.Text[..chars], Metrics.LyricFont, Metrics.LyricSize);
-
-    // Where the text cursor is drawn for a position in the lyrics.
-    public (int Sys, double X, double Baseline) LyricCaret(int index)
+    public static bool LyricFits(LyricSlot s, string text)
     {
-        LyricLine? prev = null;
-        foreach (var row in Lyrics)
-        {
-            if (index < row.Start && prev != null) return (prev.Sys, RowEndX(prev), prev.Baseline);
-            if (index >= row.Start && index <= row.End) return (row.Sys, XInRow(row, index), row.Baseline);
-            prev = row;
-        }
-        var lastRow = Lyrics[^1];
-        return (lastRow.Sys, RowEndX(lastRow), lastRow.Baseline);
+        string body = text.EndsWith('-') && text.Length > 1 ? text[..^1] : text;
+        return LyricWidth(body) / 2 <= RoomHalf(s) + 0.01;
     }
 
-    double XInRow(LyricLine row, int index)
+    // Where a lyric's words are drawn. Words that fitted when typed can run out
+    // of room later (bars added, a narrower window, the printed page); they are
+    // then squeezed sideways to fit.
+    public static (double Left, double Scale, double Half) LyricPlacement(LyricSlot s)
     {
-        double x = row.Left;
-        int end = row.Start;
-        foreach (var w in row.Words)
-        {
-            if (index < w.Start) return Math.Min(w.X, x + Space * (index - end));
-            if (index <= w.Start + w.Text.Length) return w.X + PrefixWidth(w, index - w.Start);
-            x = w.X + w.Width;
-            end = w.Start + w.Text.Length;
-        }
-        return x + Space * Math.Max(0, index - end);
+        double w = LyricWidth(s.Body);
+        double scale = w / 2 > RoomHalf(s) ? RoomHalf(s) * 2 / w : 1;
+        return (s.Cx - w * scale / 2, scale, w * scale / 2);
     }
 
-    double RowEndX(LyricLine row) => XInRow(row, row.End);
-
-    // The text position closest to a click under staff `sys`, or -1 when that
-    // staff has no lyric row yet.
-    public int LyricIndexAt(int sys, double x)
+    // The x of the text cursor after `chars` characters of a lyric.
+    public static double LyricCaretX(LyricSlot s, int chars)
     {
-        if (sys >= Lyrics.Count) return -1;
-        var row = Lyrics[sys];
-        foreach (var w in row.Words)
-        {
-            if (x >= w.X + w.Width) continue;
-            if (x <= w.X) return w.Start;
-            int best = 0;
-            double bestD = double.MaxValue;
-            for (int c = 0; c <= w.Text.Length; c++)
-            {
-                double d = Math.Abs(w.X + PrefixWidth(w, c) - x);
-                if (d < bestD) { bestD = d; best = c; }
-            }
-            return w.Start + best;
-        }
-        return row.End;
+        var (left, scale, half) = LyricPlacement(s);
+        if (chars >= s.Body.Length) return s.Body.Length == 0 ? s.Cx : s.Cx + half + (chars > s.Body.Length ? LyricWidth("-") : 0);
+        return left + LyricWidth(s.Text[..chars]) * scale;
     }
 
-    public (int Start, int End) LyricRowRange(int sys) => (Lyrics[sys].Start, Lyrics[sys].End);
+    // The character position nearest to a click at x.
+    public static int LyricIndexAt(LyricSlot s, double x)
+    {
+        int best = 0;
+        double bestD = double.MaxValue;
+        for (int c = 0; c <= s.Text.Length; c++)
+        {
+            double d = Math.Abs(LyricCaretX(s, c) - x);
+            if (d < bestD) { bestD = d; best = c; }
+        }
+        return best;
+    }
+
+    // The sung note whose lyric is nearest to a click under staff `sys`.
+    public LyricSlot? LyricSlotAt(int sys, double x) =>
+        Lyrics.Where(l => l.Sys == sys).MinBy(l => Math.Abs(l.Cx - x));
 
     /* ----------------------- Bars (this is where they happen) ----------------------- */
 

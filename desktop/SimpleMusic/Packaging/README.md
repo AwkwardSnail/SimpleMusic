@@ -8,7 +8,7 @@ Everything needed to build the Store package is in this folder:
 | `AppxManifest.template.xml` | The package description (name, icons, capabilities) |
 | `build-msix.ps1` | Publishes the app and builds `..\..\dist\SimpleMusic_<version>.msixbundle` (x64 + ARM64) |
 | `StoreScreenshots\` | Three screenshots for the Store listing (1544×929): writing freely, Twinkle Twinkle in 4/4, Happy Birthday in 3/4 |
-| `ExampleSongs\` | The two songs as SimpleMusic sheets (`.smusic`). `make-examples.ps1` writes the notes, then `dotnet run align-lyrics.cs` (run in that folder) places each syllable under its note for the screenshot width |
+| `ExampleSongs\` | The two songs as SimpleMusic sheets (`.smusic`). `make-examples.ps1` writes them, with one lyric syllable on each note |
 
 ## 1. Things only you can do (Partner Center)
 
@@ -55,7 +55,7 @@ For updates, raise the version: `-Version 1.0.1.0` (the last number must stay 0)
 > - Click to place notes, drag them up and down, add sharps and flats
 > - Whole to sixteenth notes, dotted notes and rests, with automatic beaming
 > - Pick how many beats go in each bar and which note counts as one beat
-> - Type lyrics straight onto the score; they flow from staff to staff
+> - Type lyrics straight under the notes, one word or syllable per note
 > - Listen to your melody, then export a clean PDF to print or share
 
 ## 4. Optional checks before submitting

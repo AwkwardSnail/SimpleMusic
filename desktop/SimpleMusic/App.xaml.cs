@@ -101,9 +101,9 @@ public partial class App : Application
         window.Show();
     }
 
-    // Types lyrics on the score through the normal keyboard and text-input
-    // events: continue the first line, start a new staff, fix a word, and type
-    // under an empty staff further down.
+    // Types lyrics under notes through the normal keyboard and text-input
+    // events: replace a syllable, Tab to the next note, type more than fits,
+    // and add to a lyric further down.
     static async Task LyricTest(MainWindow w)
     {
         var score = w.Score;
@@ -130,16 +130,17 @@ public partial class App : Application
             await Task.Delay(50);
         }
 
-        score.StartLyrics(0, 10_000);              // after "hill,"
-        Type(" so bright"); await Settle();
-        Key(System.Windows.Input.Key.Enter); await Settle();
-        Type("a new line hear"); await Settle();
-        Key(System.Windows.Input.Key.Back); Key(System.Windows.Input.Key.Back); await Settle();
-        Type("re"); await Settle();
-        Type(" and it keeps on going all the way across the staff until it spills over onto the next line of music");
-        await Settle();
-        score.StartLyrics(3, 0);                   // under the staff left blank between the verses
-        Type("typed under an empty staff"); await Settle();
+        score.StartLyrics(0, 0);                   // under the first note: replace "Morn-"
+        Key(System.Windows.Input.Key.End);
+        for (int i = 0; i < 5; i++) Key(System.Windows.Input.Key.Back);
+        Type("Sun-"); await Settle();
+        Key(System.Windows.Input.Key.Tab);          // "ing" -> a long text that only partly fits
+        Key(System.Windows.Input.Key.Back); Key(System.Windows.Input.Key.Back); Key(System.Windows.Input.Key.Back);
+        Type("shine all day and all night long"); await Settle();
+        score.StartLyrics(0, 10_000);              // the last lyric on the first staff
+        Key(System.Windows.Input.Key.End);
+        Type(" la la"); await Settle();
+        Key(System.Windows.Input.Key.Escape); await Settle();
     }
 
     static void SaveSnapshot(Window window, string path)
@@ -168,7 +169,7 @@ static class DemoSheet
         var sheet = new Sheet
         {
             Title = "Demo melody",
-            Lyrics = "Morning light comes over the hill,\nthe kettle sings and the house is still.\n\nHum it slow, then hum it fast,\nevery tune is made to last.",
+            Lyrics = "Morn-ing light comes o-ver the hill, the ket-tle sings and the house is still, hum it slow.",
         };
         int id = 1;
         void Add(Dur d, string letters, int octave, bool dot = false, int acc = 0)
@@ -194,6 +195,7 @@ static class DemoSheet
         Add(Dur.W, "C", 5);
         AddRest(Dur.E);
         AddRest(Dur.S);
+        sheet.Sanitize();   // one syllable per note
         return sheet;
     }
 }

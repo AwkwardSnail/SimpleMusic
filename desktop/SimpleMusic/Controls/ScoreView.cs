@@ -8,7 +8,7 @@ using SimpleMusic.Rendering;
 namespace SimpleMusic.Controls;
 
 // The score: draws the sheet and turns clicks, drags and typing into edits.
-// Clicking on a staff places notes; clicking under it types lyrics there.
+// Clicking on a staff places notes; clicking under a note types its lyric.
 public sealed class ScoreView : FrameworkElement
 {
     static readonly Dictionary<Role, Brush> Brushes = new()
@@ -52,10 +52,9 @@ public sealed class ScoreView : FrameworkElement
     List<DrawOp>? cachedOps;
     (ScoreLayout?, int?, int?, int?) cacheKey;
 
-    // Lyric typing: the text cursor position, and how many staves further down
-    // the first typed character should land (when clicking under an empty staff).
-    int? lyricCaret;
-    int lyricPadRows;
+    // Lyric typing: the note whose lyric is being typed and the text cursor in it.
+    int? lyricNoteId;
+    int lyricCaret;
 
     public event Action? LyricModeChanged;
 
@@ -75,7 +74,7 @@ public sealed class ScoreView : FrameworkElement
         set { editor = value; Refresh(); }
     }
 
-    public bool IsEditingLyrics => lyricCaret != null;
+    public bool IsEditingLyrics => lyricNoteId != null;
 
     public void Refresh()
     {
@@ -89,13 +88,16 @@ public sealed class ScoreView : FrameworkElement
         double w = double.IsInfinity(available.Width) ? 900 : Math.Max(320, available.Width);
         if (editor == null) return new Size(w, Metrics.SysH);
         layout = ScoreLayout.Compute(editor.Sheet, w);
-        if (lyricCaret is int c) lyricCaret = Math.Clamp(c, 0, editor.Sheet.Lyrics.Length);
+        if (IsEditingLyrics)
+        {
+            // The note may have gone (undo, delete); then typing lyrics ends.
+            if (EditSlot is { } slot) lyricCaret = Math.Clamp(lyricCaret, 0, slot.Text.Length);
+            else Dispatcher.BeginInvoke(StopLyrics);
+        }
         return new Size(w, layout.Height);
     }
 
-    int? LyricEditSys => lyricCaret is int c && layout != null
-        ? (lyricPadRows > 0 ? layout.Lyrics.Count - 1 + lyricPadRows : layout.LyricCaret(c).Sys)
-        : null;
+    LyricSlot? EditSlot => lyricNoteId is int id ? layout?.Lyrics.FirstOrDefault(l => l.Note.Id == id) : null;
 
     protected override void OnRender(DrawingContext dc)
     {
@@ -104,31 +106,21 @@ public sealed class ScoreView : FrameworkElement
 
         // The score only needs rebuilding when the layout, selection, playing note or
         // lyric line being typed changes; the blinking cursors and hover preview go on top.
-        var editSys = LyricEditSys;
-        var key = (layout, editor.SelectedId, editor.PlayingId, editSys);
+        var key = (layout, editor.SelectedId, editor.PlayingId, lyricNoteId);
         if (cachedOps == null || !cacheKey.Equals(key))
         {
             cachedOps = ScoreRenderer.Render(editor.Sheet, layout, new ScoreRenderOptions
             {
-                SelectedId = editor.SelectedId, PlayingId = editor.PlayingId, LyricEditSys = editSys,
+                SelectedId = editor.SelectedId, PlayingId = editor.PlayingId, LyricEditId = lyricNoteId,
             });
             cacheKey = key;
         }
         Draw(dc, cachedOps);
 
-        if (caretOn && IsEditingLyrics && editSys is int sys)
+        if (caretOn && EditSlot is { } slot)
         {
-            double x, baseline;
-            if (lyricPadRows > 0 && sys < layout.Lines.Count)
-            {
-                x = layout.Lines[sys].Left;
-                baseline = layout.Lines[sys].LyricBaseline;
-            }
-            else
-            {
-                (_, x, baseline) = layout.LyricCaret(lyricCaret!.Value);
-            }
-            dc.DrawLine(PenFor(Role.Caret, 1.6), new Point(x, baseline - 14), new Point(x, baseline + 4));
+            double x = ScoreLayout.LyricCaretX(slot, lyricCaret);
+            dc.DrawLine(PenFor(Role.Caret, 1.6), new Point(x, slot.Baseline - 14), new Point(x, slot.Baseline + 4));
         }
         else if (caretOn && !IsEditingLyrics && editor.SelectedId == null && editor.PlayingId == null)
         {
@@ -285,22 +277,18 @@ public sealed class ScoreView : FrameworkElement
 
     /* --------------------------------- Lyrics -------------------------------- */
 
+    // Starts typing the lyric of the note nearest to a click under staff `sys`.
     internal void StartLyrics(int sys, double x)
     {
-        var text = editor!.Sheet.Lyrics;
-        int index = layout!.LyricIndexAt(sys, x);
-        if (index >= 0)
-        {
-            lyricCaret = index;
-            lyricPadRows = 0;
-        }
-        else
-        {
-            // Under a staff past the end of the words: typing will start there.
-            lyricCaret = text.Length;
-            lyricPadRows = sys - (layout.Lyrics.Count - 1);
-        }
-        if (editor.SelectedId != null) editor.ClearSelection();
+        if (layout!.LyricSlotAt(sys, x) is { } slot) EditLyric(slot, ScoreLayout.LyricIndexAt(slot, x));
+        else StopLyrics();
+    }
+
+    void EditLyric(LyricSlot slot, int caret)
+    {
+        lyricNoteId = slot.Note.Id;
+        lyricCaret = Math.Clamp(caret, 0, slot.Text.Length);
+        if (editor!.SelectedId != null) editor.ClearSelection();
         editor.BeginLyricTyping();
         caretOn = true;
         InvalidateVisual();
@@ -310,22 +298,44 @@ public sealed class ScoreView : FrameworkElement
     public void StopLyrics()
     {
         if (!IsEditingLyrics) return;
-        lyricCaret = null;
-        lyricPadRows = 0;
+        lyricNoteId = null;
         InvalidateVisual();
         LyricModeChanged?.Invoke();
     }
 
+    // Moves to the lyric of the next (+1) or previous (-1) sung note.
+    void MoveLyric(int dir, bool toStart)
+    {
+        if (EditSlot is not { } slot) return;
+        int i = layout!.Lyrics.IndexOf(slot) + dir;
+        if (i < 0 || i >= layout.Lyrics.Count) return;
+        var to = layout.Lyrics[i];
+        EditLyric(to, toStart ? 0 : to.Text.Length);
+    }
+
+    // Types text at the cursor, character by character, while it still fits
+    // under the note. What doesn't fit is left out.
     void InsertLyricText(string s)
     {
-        s = s.Replace("\r\n", "\n").Replace('\r', '\n').Replace('\t', ' ');
-        if (s.Length == 0) return;
-        var text = editor!.Sheet.Lyrics;
-        int i = Math.Clamp(lyricCaret!.Value, 0, text.Length);
-        if (lyricPadRows > 0) { s = new string('\n', lyricPadRows) + s; lyricPadRows = 0; }
-        if (text.Length + s.Length > 20000) return;
-        lyricCaret = i + s.Length;
-        editor.SetLyrics(text.Insert(i, s));
+        if (EditSlot is not { } slot) return;
+        s = s.Replace("\r\n", " ").Replace('\r', ' ').Replace('\n', ' ').Replace('\t', ' ');
+        var text = slot.Text;
+        int i = Math.Clamp(lyricCaret, 0, text.Length);
+        foreach (var c in s)
+        {
+            var next = text.Insert(i, c.ToString());
+            if (next.Length > Note.MaxLyric || !ScoreLayout.LyricFits(slot, next)) break;
+            text = next;
+            i++;
+        }
+        if (text == slot.Text) return;
+        SetLyricText(slot, text, i);
+    }
+
+    void SetLyricText(LyricSlot slot, string text, int caret)
+    {
+        lyricCaret = caret;
+        editor!.SetLyric(slot.Note, text);
     }
 
     protected override void OnTextInput(TextCompositionEventArgs e)
@@ -341,8 +351,9 @@ public sealed class ScoreView : FrameworkElement
     // produce characters, which then arrive through OnTextInput.
     public bool HandleLyricKey(Key key, bool ctrl)
     {
-        if (editor == null || layout == null || lyricCaret is not int i) return false;
-        var text = editor.Sheet.Lyrics;
+        if (editor == null || layout == null || EditSlot is not { } slot) return false;
+        var text = slot.Text;
+        int i = Math.Clamp(lyricCaret, 0, text.Length);
         caretOn = true;
 
         if (ctrl)
@@ -354,49 +365,38 @@ public sealed class ScoreView : FrameworkElement
         switch (key)
         {
             case Key.Escape:
+            case Key.Enter:
                 StopLyrics();
                 break;
-            case Key.Enter:
-                InsertLyricText("\n");
+            case Key.Tab:
+                MoveLyric(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1, toStart: false);
                 break;
             case Key.Back:
-                if (lyricPadRows > 0) { lyricPadRows--; break; }
-                if (i > 0) { lyricCaret = i - 1; editor.SetLyrics(text.Remove(i - 1, 1)); }
+                if (i > 0) SetLyricText(slot, text.Remove(i - 1, 1), i - 1);
+                else MoveLyric(-1, toStart: false);
                 break;
             case Key.Delete:
-                if (i < text.Length) editor.SetLyrics(text.Remove(i, 1));
+                if (i < text.Length) SetLyricText(slot, text.Remove(i, 1), i);
                 break;
             case Key.Left:
-                lyricPadRows = 0;
-                lyricCaret = Math.Max(0, i - 1);
+                if (i > 0) lyricCaret = i - 1;
+                else MoveLyric(-1, toStart: false);
                 break;
             case Key.Right:
-                lyricPadRows = 0;
-                lyricCaret = Math.Min(text.Length, i + 1);
+                if (i < text.Length) lyricCaret = i + 1;
+                else MoveLyric(1, toStart: true);
                 break;
             case Key.Home:
-            case Key.End:
-            {
-                lyricPadRows = 0;
-                var (start, end) = layout.LyricRowRange(layout.LyricCaret(i).Sys);
-                lyricCaret = key == Key.Home ? start : end;
+                lyricCaret = 0;
                 break;
-            }
+            case Key.End:
+                lyricCaret = text.Length;
+                break;
             case Key.Up:
             case Key.Down:
-            {
-                lyricPadRows = 0;
-                var (sys, x, _) = layout.LyricCaret(i);
-                int target = sys + (key == Key.Up ? -1 : 1);
-                if (target < 0) lyricCaret = 0;
-                else if (target >= layout.Lyrics.Count) lyricCaret = text.Length;
-                else lyricCaret = layout.LyricIndexAt(target, x);
-                break;
-            }
-            case Key.Space:
-                return false; // typed as a character
+                break;   // nothing above or below a lyric; keeps the note's pitch safe
             default:
-                return false;
+                return false;   // typed as a character (Space too)
         }
         InvalidateVisual();
         return true;

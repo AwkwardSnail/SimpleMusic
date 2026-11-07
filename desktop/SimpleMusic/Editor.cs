@@ -17,8 +17,8 @@ public sealed class Editor
     int nextId;
     bool dragPushed;
     bool lyricsPushed;
-    readonly Stack<(List<Note> Notes, int Cursor, string Lyrics)> undo = new();
-    readonly Stack<(List<Note> Notes, int Cursor, string Lyrics)> redo = new();
+    readonly Stack<(List<Note> Notes, int Cursor)> undo = new();
+    readonly Stack<(List<Note> Notes, int Cursor)> redo = new();
 
     public event Action? Changed;
     public event Action<Note>? Preview;     // a note was placed or changed: play it briefly
@@ -44,12 +44,11 @@ public sealed class Editor
 
     /* ------------------------------- History ------------------------------- */
 
-    (List<Note>, int, string) Snapshot() => (Notes.Select(n => n.Clone()).ToList(), Cursor, Sheet.Lyrics);
+    (List<Note>, int) Snapshot() => (Notes.Select(n => n.Clone()).ToList(), Cursor);
 
-    void Restore((List<Note> Notes, int Cursor, string Lyrics) s)
+    void Restore((List<Note> Notes, int Cursor) s)
     {
         Sheet.Notes = s.Notes;
-        Sheet.Lyrics = s.Lyrics;
         Cursor = Math.Clamp(s.Cursor, 0, s.Notes.Count);
         SelectedId = null;
     }
@@ -63,14 +62,16 @@ public sealed class Editor
 
     /* ------------------------------- Lyrics -------------------------------- */
 
-    // A stretch of typing counts as one step for undo.
+    // Typing under one note counts as one step for undo.
     public void BeginLyricTyping() => lyricsPushed = false;
 
-    public void SetLyrics(string text)
+    public void SetLyric(Note note, string text)
     {
-        if (text == Sheet.Lyrics) return;
+        var clean = Sheet.CleanLyric(text);
+        if (clean == note.Lyric) return;
         if (!lyricsPushed) { PushHistory(); lyricsPushed = true; }
-        Sheet.Lyrics = text;
+        // Undo snapshots are copies, so find the live note by its id.
+        if (Notes.FirstOrDefault(n => n.Id == note.Id) is { } live) live.Lyric = clean;
         Notify();
     }
 
