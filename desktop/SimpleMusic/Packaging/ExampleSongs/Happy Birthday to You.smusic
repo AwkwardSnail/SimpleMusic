@@ -1,0 +1,223 @@
+{
+  "App": "SimpleMusic",
+  "FormatVersion": 1,
+  "Sheet": {
+    "Title": "Happy Birthday to You",
+    "Lyrics": "                 Hap  -   py      birth -  day      to            you,       hap   -  py       birth - day       to            you,       hap   -  py       birth - day,   dear         some-one,     hap   -  py       birth - day       to            you!",
+    "Notes": [
+      {
+        "Id": 1,
+        "Rest": true,
+        "Dur": "H",
+        "Dot": false,
+        "Step": 34,
+        "Acc": 0
+      },
+      {
+        "Id": 2,
+        "Rest": false,
+        "Dur": "E",
+        "Dot": true,
+        "Step": 32,
+        "Acc": 0
+      },
+      {
+        "Id": 3,
+        "Rest": false,
+        "Dur": "S",
+        "Dot": false,
+        "Step": 32,
+        "Acc": 0
+      },
+      {
+        "Id": 4,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 33,
+        "Acc": 0
+      },
+      {
+        "Id": 5,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 32,
+        "Acc": 0
+      },
+      {
+        "Id": 6,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 35,
+        "Acc": 0
+      },
+      {
+        "Id": 7,
+        "Rest": false,
+        "Dur": "H",
+        "Dot": false,
+        "Step": 34,
+        "Acc": 0
+      },
+      {
+        "Id": 8,
+        "Rest": false,
+        "Dur": "E",
+        "Dot": true,
+        "Step": 32,
+        "Acc": 0
+      },
+      {
+        "Id": 9,
+        "Rest": false,
+        "Dur": "S",
+        "Dot": false,
+        "Step": 32,
+        "Acc": 0
+      },
+      {
+        "Id": 10,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 33,
+        "Acc": 0
+      },
+      {
+        "Id": 11,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 32,
+        "Acc": 0
+      },
+      {
+        "Id": 12,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 36,
+        "Acc": 0
+      },
+      {
+        "Id": 13,
+        "Rest": false,
+        "Dur": "H",
+        "Dot": false,
+        "Step": 35,
+        "Acc": 0
+      },
+      {
+        "Id": 14,
+        "Rest": false,
+        "Dur": "E",
+        "Dot": true,
+        "Step": 32,
+        "Acc": 0
+      },
+      {
+        "Id": 15,
+        "Rest": false,
+        "Dur": "S",
+        "Dot": false,
+        "Step": 32,
+        "Acc": 0
+      },
+      {
+        "Id": 16,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 39,
+        "Acc": 0
+      },
+      {
+        "Id": 17,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 37,
+        "Acc": 0
+      },
+      {
+        "Id": 18,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 35,
+        "Acc": 0
+      },
+      {
+        "Id": 19,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 34,
+        "Acc": 0
+      },
+      {
+        "Id": 20,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 33,
+        "Acc": 0
+      },
+      {
+        "Id": 21,
+        "Rest": false,
+        "Dur": "E",
+        "Dot": true,
+        "Step": 38,
+        "Acc": 0
+      },
+      {
+        "Id": 22,
+        "Rest": false,
+        "Dur": "S",
+        "Dot": false,
+        "Step": 38,
+        "Acc": 0
+      },
+      {
+        "Id": 23,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 37,
+        "Acc": 0
+      },
+      {
+        "Id": 24,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 35,
+        "Acc": 0
+      },
+      {
+        "Id": 25,
+        "Rest": false,
+        "Dur": "Q",
+        "Dot": false,
+        "Step": 36,
+        "Acc": 0
+      },
+      {
+        "Id": 26,
+        "Rest": false,
+        "Dur": "H",
+        "Dot": false,
+        "Step": 35,
+        "Acc": 0
+      }
+    ],
+    "Barred": true,
+    "Beats": 3,
+    "BeatTicks": 8,
+    "FillLast": true,
+    "Tempo": 100
+  }
+}

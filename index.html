@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SimpleMusic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Music&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">𝄞</span>
+      <div>
+        <h1>SimpleMusic</h1>
+        <p>Write your notes first. Count the bars later.</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="btn-new" class="ghost-btn" title="Start a new, empty sheet">New sheet</button>
+      <button id="btn-pdf" class="ghost-btn" title="Export the sheet as a PDF (choose “Save as PDF” in the print window)">Export PDF</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="step">
+      <div class="step-head">
+        <span class="step-num">1</span>
+        <div>
+          <h2>Write your melody</h2>
+          <p>Pick a note length, then click on the staff to place a note. Don't worry about bars yet.</p>
+        </div>
+      </div>
+
+      <div class="toolbar" role="toolbar" aria-label="Note tools">
+        <div class="group">
+          <span class="group-label">Note length</span>
+          <div class="buttons" id="dur-buttons"></div>
+        </div>
+        <div class="group">
+          <span class="group-label">Options</span>
+          <div class="buttons">
+            <button id="btn-dot" class="tool" title="Dotted: makes the note half as long again (key .)">
+              <span class="tool-icon">♩.</span><span class="tool-text">Dotted</span>
+            </button>
+            <button id="btn-rest" class="tool" title="Rest mode: clicks add silences instead of notes (key R adds a rest)">
+              <span class="tool-icon" id="rest-icon"></span><span class="tool-text">Rest</span>
+            </button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="group-label">Sharp / flat</span>
+          <div class="buttons">
+            <button id="btn-sharp" class="tool" title="Sharp: raise the selected note a half step (key +)"><span class="tool-icon acc">♯</span></button>
+            <button id="btn-flat" class="tool" title="Flat: lower the selected note a half step (key -)"><span class="tool-icon acc">♭</span></button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="group-label">Edit</span>
+          <div class="buttons">
+            <button id="btn-undo" class="tool" title="Undo (Ctrl+Z)"><span class="tool-icon">↶</span><span class="tool-text">Undo</span></button>
+            <button id="btn-redo" class="tool" title="Redo (Ctrl+Y)"><span class="tool-icon">↷</span><span class="tool-text">Redo</span></button>
+            <button id="btn-delete" class="tool" title="Delete the selected note (Delete / Backspace)"><span class="tool-icon">✕</span><span class="tool-text">Delete</span></button>
+          </div>
+        </div>
+        <div class="group">
+          <span class="group-label">Listen</span>
+          <div class="buttons">
+            <button id="btn-play" class="tool play" title="Play / stop (Space)"><span class="tool-icon">▶</span><span class="tool-text">Play</span></button>
+            <label class="tempo" title="Speed in beats per minute">
+              <input type="range" id="tempo" min="40" max="200" step="1" value="90">
+              <span><b id="tempo-val">90</b> bpm</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="paper">
+        <input id="title" class="title-input" type="text" maxlength="120" placeholder="Untitled melody" aria-label="Title of your music">
+        <div id="score"></div>
+      </div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="step" id="bar-step">
+      <div class="step-head">
+        <span class="step-num">2</span>
+        <div>
+          <h2>Divide into bars</h2>
+          <p>Choose how many beats fit in each bar and which note counts as one beat. Notes that cross a bar line are split and tied for you.</p>
+        </div>
+      </div>
+      <div class="bar-controls">
+        <label class="field">
+          <span>Beats in each bar</span>
+          <div class="stepper">
+            <button type="button" id="beats-minus" aria-label="Fewer beats">−</button>
+            <input type="number" id="beats" min="1" max="16" value="4">
+            <button type="button" id="beats-plus" aria-label="More beats">+</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>One beat is a</span>
+          <select id="beat-unit">
+            <option value="32">Whole note</option>
+            <option value="24">Dotted half note</option>
+            <option value="16">Half note</option>
+            <option value="12">Dotted quarter note</option>
+            <option value="8" selected>Quarter note</option>
+            <option value="6">Dotted eighth note</option>
+            <option value="4">Eighth note</option>
+            <option value="2">Sixteenth note</option>
+          </select>
+        </label>
+        <div class="field ts-field">
+          <span>Time signature</span>
+          <div class="ts-preview" id="ts-preview"><b>4</b><b>4</b></div>
+        </div>
+        <label class="check">
+          <input type="checkbox" id="fill-last" checked>
+          <span>Fill the last bar with rests</span>
+        </label>
+        <button id="btn-bar" class="primary">Divide into bars</button>
+      </div>
+    </section>
+
+    <details class="help">
+      <summary>Keyboard shortcuts</summary>
+      <div class="help-grid">
+        <div><kbd>A</kbd>–<kbd>G</kbd> add a note with that name</div>
+        <div><kbd>R</kbd> add a rest</div>
+        <div><kbd>1</kbd>–<kbd>5</kbd> whole, half, quarter, eighth, sixteenth</div>
+        <div><kbd>.</kbd> dotted on / off</div>
+        <div><kbd>↑</kbd> <kbd>↓</kbd> move the note up / down (<kbd>Shift</kbd> = octave)</div>
+        <div><kbd>←</kbd> <kbd>→</kbd> move between notes</div>
+        <div><kbd>+</kbd> sharp &nbsp; <kbd>-</kbd> flat</div>
+        <div><kbd>Delete</kbd> / <kbd>Backspace</kbd> remove a note</div>
+        <div><kbd>Esc</kbd> deselect</div>
+        <div><kbd>Space</kbd> play / stop</div>
+        <div><kbd>Ctrl</kbd>+<kbd>Z</kbd> undo, <kbd>Ctrl</kbd>+<kbd>Y</kbd> redo</div>
+        <div>Drag a note up or down to change its pitch</div>
+      </div>
+    </details>
+  </main>
+
+  <div id="print-area"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

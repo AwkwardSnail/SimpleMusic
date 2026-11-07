@@ -1,0 +1,7 @@
+# .NET build output
+bin/
+obj/
+# MSIX packages built by desktop/SimpleMusic/Packaging/build-msix.ps1
+desktop/dist/
+# Per-user Claude Code settings
+.claude/settings.local.json
