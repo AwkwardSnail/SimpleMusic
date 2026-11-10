@@ -45,6 +45,7 @@ public sealed class Item
     public double StaffTop, X, W, Cx, Y;
 
     public bool Beamed, StemUp;
+    public double LyricPad;     // extra room after this note so its words fit before the next note's
     public double StemX, StemEnd;
 }
 
@@ -106,7 +107,8 @@ public sealed class ScoreLayout
     public List<BarNumber> BarNumbers { get; } = new();
     public List<Beam> Beams { get; } = new();
 
-    static double ItemWidth(Item it) => 14 + 10 * Math.Sqrt(it.T) + (it.Dot ? 6 : 0) + (it.ShowAcc ? 10 : 0);
+    static double NoteWidth(Item it) => 14 + 10 * Math.Sqrt(it.T) + (it.Dot ? 6 : 0) + (it.ShowAcc ? 10 : 0);
+    static double ItemWidth(Item it) => NoteWidth(it) + it.LyricPad;
     static double UnitWidth(Unit u) =>
         u.Items.Sum(ItemWidth) + (u.Measure ? Metrics.BarPadL + Metrics.BarPadR : 0);
 
@@ -115,6 +117,7 @@ public sealed class ScoreLayout
     public static ScoreLayout Compute(Sheet sheet, double width, bool roomForLyrics = true)
     {
         var units = BuildUnits(sheet);
+        MakeRoomForLyrics(units);
         var L = new ScoreLayout { Width = width };
         double right = width - Metrics.Right;
 
@@ -235,10 +238,39 @@ public sealed class ScoreLayout
         return Math.Max(4, Math.Min(left, right));
     }
 
-    public static bool LyricFits(LyricSlot s, string text)
+    // Notes move apart to make room for their words (as in printed music), so
+    // while typing a lyric only has to fit on the staff.
+    public bool LyricFits(LyricSlot s, string text)
     {
         string body = text.EndsWith('-') && text.Length > 1 ? text[..^1] : text;
-        return LyricWidth(body) / 2 <= RoomHalf(s) + 0.01;
+        return LyricWidth(body) <= Width - Metrics.Right - Metrics.StaffX - 2 * Gap;
+    }
+
+    // Spreads the notes so each lyric keeps its full size: the distance from a
+    // sung note to the next one is at least half of each one's words, plus a
+    // gap (and room for a hyphen when the word carries on).
+    static void MakeRoomForLyrics(List<Unit> units)
+    {
+        var items = units.SelectMany(u => u.Items).ToList();
+        static bool Sung(Item it) => it.First && !it.Rest && it.Note != null;
+        static double Half(Item it)
+        {
+            var text = it.Note!.Lyric ?? "";
+            if (text.EndsWith('-') && text.Length > 1) text = text[..^1];
+            return Math.Max(HeadClear, LyricWidth(text) / 2);
+        }
+        for (int i = 0; i < items.Count; i++)
+        {
+            var it = items[i];
+            if (!Sung(it) || string.IsNullOrEmpty(it.Note!.Lyric)) continue;
+            int j = i + 1;
+            double between = NoteWidth(it);   // distance to the next sung note as spaced now
+            while (j < items.Count && !Sung(items[j])) between += NoteWidth(items[j++]);
+            if (j >= items.Count) continue;
+            bool hyphen = it.Note.Lyric.EndsWith('-') && it.Note.Lyric.Length > 1;
+            double need = Half(it) + Gap + Half(items[j]) + (hyphen ? LyricWidth("-") + Gap : 0);
+            it.LyricPad = Math.Max(0, need - between);
+        }
     }
 
     // Where a lyric's words are drawn. Words that fitted when typed can run out

@@ -313,8 +313,8 @@ public sealed class ScoreView : FrameworkElement
         EditLyric(to, toStart ? 0 : to.Text.Length);
     }
 
-    // Types text at the cursor, character by character, while it still fits
-    // under the note. What doesn't fit is left out.
+    // Types text at the cursor, character by character. The notes move apart
+    // to make room; only text wider than the staff is left out.
     void InsertLyricText(string s)
     {
         if (EditSlot is not { } slot) return;
@@ -324,7 +324,7 @@ public sealed class ScoreView : FrameworkElement
         foreach (var c in s)
         {
             var next = text.Insert(i, c.ToString());
-            if (next.Length > Note.MaxLyric || !ScoreLayout.LyricFits(slot, next)) break;
+            if (next.Length > Note.MaxLyric || !layout!.LyricFits(slot, next)) break;
             text = next;
             i++;
         }
