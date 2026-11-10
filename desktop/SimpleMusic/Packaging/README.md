@@ -42,9 +42,9 @@ For updates, raise the version: `-Version 1.0.1.0` (the last number must stay 0)
 - **Store listing:** description (draft below), the screenshots from `StoreScreenshots\`
   (better ones of your own songs are welcome), category **Music**, a few search terms.
 - **Properties:** the app doesn't collect personal data or use the internet, so a privacy policy
-  isn't required. If you add accounts, online features or analytics later, you'll need one.
+  isn't required. You can still give the Awkward Snail one: https://awkwardsnail.com.au/privacy.html
 - **Age ratings:** answer the questionnaire. There is no user-to-user content, so it should come out as rated for everyone.
-- **Pricing and availability:** free or paid, and which markets.
+- **Pricing and availability:** A$1.50, one-time (no in-app purchases, no ads).
 
 ### Draft listing text
 
@@ -56,7 +56,10 @@ For updates, raise the version: `-Version 1.0.1.0` (the last number must stay 0)
 > - Whole to sixteenth notes, dotted notes and rests, with automatic beaming
 > - Pick how many beats go in each bar and which note counts as one beat
 > - Type lyrics straight under the notes, one word or syllable per note
-> - Listen to your melody, then export a clean PDF to print or share
+> - Listen to your melody, save it as a sheet and open it again later
+> - Export a clean PDF to print or share, or a MIDI file for other music apps
+>
+> No accounts, no ads and no internet needed: your music stays on your computer.
 
 ## 4. Optional checks before submitting
 
