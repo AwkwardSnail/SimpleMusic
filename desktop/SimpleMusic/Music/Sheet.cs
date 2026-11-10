@@ -108,7 +108,7 @@ public static class SheetStore
     /* ---------------------- Sheet files (.smusic) ---------------------- */
 
     public const string FileExtension = ".smusic";
-    public const string FileFilter = "SimpleMusic sheet (*.smusic)|*.smusic";
+    public const string FileFilter = "Simple Music Melody sheet (*.smusic)|*.smusic";
     const int FormatVersion = 1;
 
     // What a .smusic file holds: a marker, a format version and the sheet.
@@ -125,11 +125,11 @@ public static class SheetStore
     {
         SheetFile? file;
         try { file = JsonSerializer.Deserialize<SheetFile>(File.ReadAllText(path), Options); }
-        catch (JsonException) { throw new InvalidDataException("This file isn't a SimpleMusic sheet, or it is damaged."); }
+        catch (JsonException) { throw new InvalidDataException("This file isn't a Simple Music Melody sheet, or it is damaged."); }
         if (file?.App != "SimpleMusic" || file.Sheet == null)
-            throw new InvalidDataException("This file isn't a SimpleMusic sheet.");
+            throw new InvalidDataException("This file isn't a Simple Music Melody sheet.");
         if (file.FormatVersion > FormatVersion)
-            throw new InvalidDataException("This sheet was made with a newer version of SimpleMusic. Please update the app to open it.");
+            throw new InvalidDataException("This sheet was made with a newer version of Simple Music Melody. Please update the app to open it.");
         file.Sheet.Sanitize();
         return file.Sheet;
     }

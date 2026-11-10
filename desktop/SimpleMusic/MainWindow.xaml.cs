@@ -95,7 +95,7 @@ public partial class MainWindow : Window
             SheetStore.SaveLastFile(filePath);
         }
         string name = filePath != null ? Path.GetFileNameWithoutExtension(filePath) : "Untitled";
-        Title = $"{name}{(IsDirty ? "*" : "")} — SimpleMusic";
+        Title = $"{name}{(IsDirty ? "*" : "")} — Simple Music Melody";
     }
 
     bool IsDirty => SheetStore.ToFileJson(Sheet) != savedJson;
@@ -107,7 +107,7 @@ public partial class MainWindow : Window
     {
         if (!IsDirty) return true;
         string name = filePath != null ? Path.GetFileName(filePath) : "this sheet";
-        var answer = MessageBox.Show(this, $"Save the changes to {name} first?", "SimpleMusic",
+        var answer = MessageBox.Show(this, $"Save the changes to {name} first?", "Simple Music Melody",
             MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
         return answer switch
         {
@@ -145,12 +145,12 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"{Path.GetFileName(path)} could not be opened:\n{ex.Message}", "SimpleMusic",
+            MessageBox.Show(this, $"{Path.GetFileName(path)} could not be opened:\n{ex.Message}", "Simple Music Melody",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
-    // Another launch of SimpleMusic asked this window to show itself (and open a sheet).
+    // Another launch of Simple Music Melody asked this window to show itself (and open a sheet).
     public void BringForwardAndOpen(string path)
     {
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
@@ -189,7 +189,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"The sheet could not be saved:\n{ex.Message}", "SimpleMusic", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, $"The sheet could not be saved:\n{ex.Message}", "Simple Music Melody", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
     }
@@ -368,7 +368,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"The MIDI file could not be saved:\n{ex.Message}", "SimpleMusic", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, $"The MIDI file could not be saved:\n{ex.Message}", "Simple Music Melody", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -413,7 +413,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"The PDF could not be saved:\n{ex.Message}", "SimpleMusic", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, $"The PDF could not be saved:\n{ex.Message}", "Simple Music Melody", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 

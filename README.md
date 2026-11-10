@@ -1,8 +1,11 @@
-# SimpleMusic
+# Simple Music Melody
 
 Write your notes first, count the bars later. A music editor for beginners:
-place notes on the staff without worrying about bar lines, then let SimpleMusic
+place notes on the staff without worrying about bar lines, then let Simple Music Melody
 split them into bars for you. Play it back, and export it as a PDF.
+
+It is called SimpleMusic in the code and in this repository; its sister app is
+[Simple Music Rhythm](https://github.com/AwkwardSnail/SimpleMusicRhythm).
 
 Made by [aWkward sn@ail](https://awkwardsnail.com.au): calm, simple tools that
 stay the way you left them.
@@ -33,7 +36,7 @@ Microsoft Store.
 
 ## Privacy
 
-SimpleMusic collects no data and never contacts an Awkward Snail server. Your
+Simple Music Melody collects no data and never contacts an Awkward Snail server. Your
 sheets stay on your device. See the
 [privacy policy](https://awkwardsnail.com.au/privacy.html).
 

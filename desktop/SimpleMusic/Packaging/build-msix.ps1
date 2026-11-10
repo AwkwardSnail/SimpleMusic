@@ -1,9 +1,9 @@
-# Builds SimpleMusic as MSIX packages for the Microsoft Store.
+# Builds Simple Music Melody as MSIX packages for the Microsoft Store.
 #
 #   .\build-msix.ps1                       # test build with placeholder identity
-#   .\build-msix.ps1 -IdentityName "12345YourName.SimpleMusic" `
-#                    -Publisher "CN=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" `
-#                    -PublisherDisplayName "Your Name"
+#   .\build-msix.ps1 -IdentityName "AkwardSnail.SimpleMusicMelody" `
+#                    -Publisher "CN=A55585C2-FE40-4ED1-9B77-46466AE9C532" `
+#                    -PublisherDisplayName "aWkward Snail"
 #
 # The three identity values come from Partner Center (Product identity page)
 # once the app name is reserved. Store uploads don't need signing: the Store
@@ -11,7 +11,7 @@
 param(
     [string]$IdentityName = 'SimpleMusic.LocalTest',
     [string]$Publisher = 'CN=SimpleMusic Local Test',
-    [string]$PublisherDisplayName = 'SimpleMusic',
+    [string]$PublisherDisplayName = 'Simple Music Melody',
     [string]$Version = '1.0.0.0',
     [string[]]$Architectures = @('x64', 'arm64'),
     [string]$Out = (Join-Path $PSScriptRoot '..\..\dist'),

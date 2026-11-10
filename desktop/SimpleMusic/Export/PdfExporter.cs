@@ -128,7 +128,7 @@ public static class PdfExporter
         Obj(1, "<< /Type /Catalog /Pages 2 0 R >>");
         var kids = string.Join(" ", Enumerable.Range(0, count).Select(i => $"{4 + 2 * i} 0 R"));
         Obj(2, $"<< /Type /Pages /Kids [{kids}] /Count {count} >>");
-        Obj(3, $"<< /Title {PdfText(title)} /Creator (SimpleMusic) /Producer (SimpleMusic) >>");
+        Obj(3, $"<< /Title {PdfText(title)} /Creator (Simple Music Melody) /Producer (Simple Music Melody) >>");
         for (int i = 0; i < count; i++)
         {
             int pageId = 4 + 2 * i, contentId = 5 + 2 * i;
