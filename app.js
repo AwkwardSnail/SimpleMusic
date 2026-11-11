@@ -60,7 +60,7 @@ function timeSignature() {
    ===================================================================== */
 
 const state = {
-  notes: [],          // { id, rest, dur, dot, step, acc }
+  notes: [],          // { id, rest, dur, dot, step, acc, lyric }
   cursor: 0,          // insertion point (index into notes)
   selectedId: null,
   dur: 'q',
@@ -73,7 +73,14 @@ const state = {
   tempo: 90,
   title: '',
   playingId: null,
+  lyricId: null,      // the note whose lyric is being typed
+  lyricCaret: 0,      // text cursor inside that lyric
+  fileName: null,     // the .smusic file this sheet was opened from or saved to
+  savedJson: null,    // the sheet as last saved, to know about unsaved changes
+  notice: null,       // a short message shown in the status line once
 };
+const MAX_LYRIC = 60;
+let lyricPushed = false;   // a stretch of typing under one note is one undo step
 let nextId = 1;
 const undoStack = [];
 const redoStack = [];
@@ -87,11 +94,14 @@ function restore(json) {
   state.notes = s.notes;
   state.cursor = clamp(s.cursor, 0, s.notes.length);
   state.selectedId = null;
+  if (!state.notes.some((n) => n.id === state.lyricId && !n.rest)) state.lyricId = null;
+  lyricPushed = false;
 }
 function pushHistory() {
   undoStack.push(snapshot());
   if (undoStack.length > 300) undoStack.shift();
   redoStack.length = 0;
+  lyricPushed = false;
 }
 function undo() {
   if (!undoStack.length) return;
@@ -111,6 +121,7 @@ function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       notes: state.notes, barred: state.barred, beats: state.beats,
       beatTicks: state.beatTicks, fillLast: state.fillLast, tempo: state.tempo, dur: state.dur, title: state.title,
+      fileName: state.fileName, savedJson: state.savedJson,
     }));
   } catch (e) { /* storage unavailable: the sheet just won't be remembered */ }
 }
@@ -119,6 +130,7 @@ function load() {
     const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!s || !Array.isArray(s.notes)) return;
     state.notes = s.notes.filter((n) => BASE_TICKS[n.dur] && Number.isInteger(n.step));
+    for (const n of state.notes) n.lyric = n.rest ? null : cleanLyric(n.lyric);
     state.cursor = state.notes.length;
     state.barred = !!s.barred;
     state.beats = clamp(s.beats | 0 || 4, 1, 16);
@@ -127,6 +139,8 @@ function load() {
     state.tempo = clamp(s.tempo | 0 || 90, 40, 200);
     if (BASE_TICKS[s.dur]) state.dur = s.dur;
     if (typeof s.title === 'string') state.title = s.title.slice(0, 120);
+    if (typeof s.fileName === 'string') state.fileName = s.fileName;
+    if (typeof s.savedJson === 'string') state.savedJson = s.savedJson;
     nextId = state.notes.reduce((m, n) => Math.max(m, n.id || 0), 0) + 1;
   } catch (e) { /* ignore a broken save */ }
 }
@@ -184,8 +198,15 @@ function makeItem(n, part, first, tieNext) {
   return {
     note: n, virtual: false, rest: n.rest, step: n.step,
     dur: part.dur, dot: part.dot, t: part.t,
-    first, tieNext, showAcc: first && !n.rest && !!n.acc,
+    first, tieNext, showAcc: first && !n.rest && !!n.acc, lyricPad: 0,
   };
+}
+
+// A lyric is free text of up to MAX_LYRIC characters; empty means none.
+function cleanLyric(text) {
+  if (typeof text !== 'string') return null;
+  text = text.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, MAX_LYRIC);
+  return text.trim() ? text : null;
 }
 
 /* =====================================================================
@@ -203,13 +224,62 @@ const RIGHT = 14;
 const BAR_PAD_L = 12;
 const BAR_PAD_R = 8;
 
-const itemWidth = (it) => 14 + 10 * Math.sqrt(it.t) + (it.dot ? 6 : 0) + (it.showAcc ? 10 : 0);
+// Lyrics sit under each staff; lines of music get extra room for them on screen.
+const LYRIC_FONT = "15px Georgia, 'Times New Roman', serif";
+const LYRIC_BASELINE = 70;   // below the staff top, unless low notes need more room
+const LYRIC_EXTRA = 24;
+const LYRIC_ZONE = 63;       // clicks this far below the staff top go to the lyrics
+const LYRIC_GAP = 9;         // between neighbouring words
+const HEAD_CLEAR = 7;        // an empty neighbour still keeps its note head clear
+
+const noteWidth = (it) => 14 + 10 * Math.sqrt(it.t) + (it.dot ? 6 : 0) + (it.showAcc ? 10 : 0);
+const itemWidth = (it) => noteWidth(it) + (it.lyricPad || 0);
+
+const measureCtx = document.createElement('canvas').getContext('2d');
+const widthCache = new Map();
+function lyricWidth(s) {
+  if (!s) return 0;
+  let w = widthCache.get(s);
+  if (w == null) {
+    measureCtx.font = LYRIC_FONT;
+    w = measureCtx.measureText(s).width;
+    if (widthCache.size > 2000) widthCache.clear();
+    widthCache.set(s, w);
+  }
+  return w;
+}
+// A trailing "-" means the word carries on: the hyphen is drawn between the notes.
+const hasHyphen = (text) => !!text && text.length > 1 && text.endsWith('-');
+const lyricBody = (text) => (hasHyphen(text) ? text.slice(0, -1) : text || '');
+
+// Spreads the notes so each lyric keeps its full size: the distance from a
+// sung note to the next one is at least half of each one's words, plus a gap
+// (and room for a hyphen when the word carries on), as in printed music.
+function makeRoomForLyrics(units) {
+  const items = units.flatMap((u) => u.items);
+  const sung = (it) => it.first && !it.rest && it.note;
+  const half = (it) => Math.max(HEAD_CLEAR, lyricWidth(lyricBody(it.note.lyric)) / 2);
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (!sung(it) || !it.note.lyric) continue;
+    let j = i + 1;
+    let between = noteWidth(it);
+    while (j < items.length && !sung(items[j])) between += noteWidth(items[j++]);
+    if (j >= items.length) continue;
+    const need = half(it) + LYRIC_GAP + half(items[j]) + (hasHyphen(it.note.lyric) ? lyricWidth('-') + LYRIC_GAP : 0);
+    it.lyricPad = Math.max(0, need - between);
+  }
+}
 const unitWidth = (u) => u.items.reduce((s, it) => s + itemWidth(it), 0) + (u.measure ? BAR_PAD_L + BAR_PAD_R : 0);
 const yAt = (staffTop, step) => staffTop + 40 - (step - E4) * HALF;
 
-function computeLayout(W) {
+// `roomForLyrics`: leave space under every staff even without lyrics (on
+// screen, so there is always somewhere to type them; not when printing).
+function computeLayout(W, roomForLyrics = true) {
   const units = buildUnits();
+  makeRoomForLyrics(units);
   const right = W - RIGHT;
+  const sysH = roomForLyrics || state.notes.some((n) => !n.rest && n.lyric) ? SYS_H + LYRIC_EXTRA : SYS_H;
   const lines = [];
   const newLine = () => {
     const left = STAFF_X + CLEF_W + (state.barred && lines.length === 0 ? TS_W : 0);
@@ -233,7 +303,7 @@ function computeLayout(W) {
     const isLast = s === lines.length - 1;
     // Full lines are stretched to the right edge; the last one keeps its natural spacing.
     const scale = ln.natural > 0 && (!isLast || ln.natural > avail) ? avail / ln.natural : 1;
-    const staffTop = PAD_TOP + s * SYS_H + STAFF_OFFSET;
+    const staffTop = PAD_TOP + s * sysH + STAFF_OFFSET;
     ln.staffTop = staffTop;
     let x = ln.left;
     ln.units.forEach((u, ui) => {
@@ -261,7 +331,81 @@ function computeLayout(W) {
   if (barlines.length) barlines[barlines.length - 1].final = true;
   const beams = beamGroups(items).map(layoutBeam);
 
-  return { W, lines, items, barlines, barNumbers, beams, height: PAD_TOP + lines.length * SYS_H };
+  // Lyrics: one slot per sung note, under its line, below the lowest ink.
+  lines.forEach((ln, s) => { ln.lyricBaseline = Math.max(ln.staffTop + LYRIC_BASELINE, lowestInk(items, ln, s) + 16); });
+  const lyrics = [];
+  let prev = null;
+  for (const it of items) {
+    if (it.rest || !it.first || !it.note) continue;
+    const slot = { note: it.note, sys: it.sys, cx: it.cx, baseline: lines[it.sys].lyricBaseline, min: STAFF_X, max: right, prev: null, next: null };
+    if (prev && prev.sys === slot.sys) { slot.prev = prev; prev.next = slot; }
+    lyrics.push(slot);
+    prev = slot;
+  }
+
+  return { W, sysH, lines, items, barlines, barNumbers, beams, lyrics, height: PAD_TOP + lines.length * sysH };
+}
+
+// The lowest point the music reaches on a line (note heads, ledger lines,
+// downward stems), so lyrics never collide with it.
+function lowestInk(items, ln, sys) {
+  let lowest = ln.staffTop + 40;
+  for (const it of items) {
+    if (it.sys !== sys || it.rest) continue;
+    lowest = Math.max(lowest, it.y + 5);
+    const down = it.beamed ? !it.stemUp : it.step >= B4;
+    if (it.dur === 'w' || !down) continue;
+    lowest = Math.max(lowest, it.beamed ? it.stemEnd + 5 : Math.max(it.y + 33, ln.staffTop + 20));
+  }
+  return lowest;
+}
+
+/* ---------------- Lyric room, placement and the text cursor ---------------- */
+
+const slotText = (s) => s.note.lyric || '';
+
+// How far a lyric may reach to each side of its note. Each neighbour keeps
+// the room its own words need (up to half the distance between the notes).
+function roomHalf(s) {
+  const occupied = (n, d) => Math.max(HEAD_CLEAR, Math.min(lyricWidth(lyricBody(slotText(n))) / 2, d / 2));
+  const left = s.prev ? s.cx - s.prev.cx - occupied(s.prev, s.cx - s.prev.cx) - LYRIC_GAP : s.cx - s.min;
+  const right = s.next ? s.next.cx - s.cx - occupied(s.next, s.next.cx - s.cx) - LYRIC_GAP : s.max - s.cx;
+  return Math.max(4, Math.min(left, right));
+}
+
+// Where a lyric's words are drawn. The notes make room for the words, so they
+// are only squeezed sideways when a single word is wider than the line allows.
+function lyricPlacement(s) {
+  const w = lyricWidth(lyricBody(slotText(s)));
+  const room = roomHalf(s);
+  const scale = w / 2 > room ? (room * 2) / w : 1;
+  return { left: s.cx - (w * scale) / 2, scale, half: (w * scale) / 2 };
+}
+
+function lyricCaretX(s, chars) {
+  const text = slotText(s);
+  const body = lyricBody(text);
+  const { left, scale, half } = lyricPlacement(s);
+  if (chars >= body.length) return body.length === 0 ? s.cx : s.cx + half + (chars > body.length ? lyricWidth('-') : 0);
+  return left + lyricWidth(text.slice(0, chars)) * scale;
+}
+
+function lyricIndexAt(s, x) {
+  let best = 0;
+  let bestD = Infinity;
+  for (let c = 0; c <= slotText(s).length; c++) {
+    const d = Math.abs(lyricCaretX(s, c) - x);
+    if (d < bestD) { bestD = d; best = c; }
+  }
+  return best;
+}
+
+function lyricSlotAt(sys, x) {
+  let best = null;
+  for (const s of layout.lyrics) {
+    if (s.sys === sys && (!best || Math.abs(s.cx - x) < Math.abs(best.cx - x))) best = s;
+  }
+  return best;
 }
 
 /* =====================================================================
@@ -451,7 +595,7 @@ scoreEl.append(svg);
 // Draws the whole score at width W. `print` leaves out everything that
 // only makes sense on screen (cursor, selection, hints, grey rests).
 function drawScore(W, print) {
-  const L = computeLayout(W);
+  const L = computeLayout(W, !print);
   let out = '';
 
   // Staves, clefs, time signature, bar numbers
@@ -497,19 +641,60 @@ function drawScore(W, print) {
     }
   });
 
+  out += lyricsSvg(L, print);
+
   if (print) return { L, out };
 
   if (!state.notes.length) {
     out += `<text class="hint" x="${L.lines[0].left + 16}" y="${L.lines[0].staffTop - 18}">Click anywhere on the staff to place your first note</text>`;
   }
 
-  // Insertion cursor
-  if (state.selectedId == null && state.playingId == null) {
+  // Text cursor while typing a lyric, otherwise the insertion cursor
+  const editing = editSlot(L);
+  if (editing) {
+    const x = lyricCaretX(editing, state.lyricCaret);
+    out += `<line class="caret lyric-caret" x1="${x}" x2="${x}" y1="${editing.baseline - 14}" y2="${editing.baseline + 4}"/>`;
+  } else if (state.selectedId == null && state.playingId == null) {
     const c = cursorPosition(L);
     const t = L.lines[c.sys].staffTop;
     out += `<line class="caret" x1="${c.x}" x2="${c.x}" y1="${t - 8}" y2="${t + 48}"/>`;
   }
   return { L, out };
+}
+
+// Each lyric centred under its note; a word that carries on gets a hyphen
+// halfway to the next note's words. On screen, empty lyrics show a faint
+// line, and the lyric being typed shows its room as a faint box.
+function lyricsSvg(L, print) {
+  let out = '';
+  for (const s of L.lyrics) {
+    const text = slotText(s);
+    const editing = !print && s.note.id === state.lyricId;
+    if (editing) {
+      const room = roomHalf(s);
+      out += `<rect class="lyric-box" x="${s.cx - room}" y="${s.baseline - 15}" width="${room * 2}" height="21" rx="3"/>`;
+    }
+    if (!text) {
+      if (!print && !editing) out += `<line class="lyric-blank" x1="${s.cx - 6}" x2="${s.cx + 6}" y1="${s.baseline + 2}" y2="${s.baseline + 2}"/>`;
+      continue;
+    }
+    const body = lyricBody(text);
+    const { left, scale, half } = lyricPlacement(s);
+    if (body) {
+      const squeeze = scale < 0.999 ? ` textLength="${lyricWidth(body) * scale}" lengthAdjust="spacingAndGlyphs"` : '';
+      out += `<text class="lyric" x="${left}" y="${s.baseline}"${squeeze}>${escapeHtml(body)}</text>`;
+    }
+    if (!hasHyphen(text)) continue;
+    const hw = lyricWidth('-');
+    const from = s.cx + half;
+    let x = from;
+    if (s.next && !editing) {
+      const to = s.next.cx - (slotText(s.next) ? lyricPlacement(s.next).half : 0);
+      if (to - from > hw + 4) x = (from + to - hw) / 2;
+    }
+    out += `<text class="lyric" x="${x}" y="${s.baseline}">-</text>`;
+  }
+  return out;
 }
 
 function render() {
@@ -524,6 +709,7 @@ function render() {
 
   updateControls();
   save();
+  document.title = `${displayFileName()}${isDirty() ? '*' : ''} — Simple Music Melody`;
 }
 
 /* =====================================================================
@@ -544,8 +730,8 @@ function buildPrintArea() {
     html += `<p class="print-sub">${num}/${den} · ${state.tempo} beats per minute</p>`;
   }
   L.lines.forEach((ln, s) => {
-    const top = PAD_TOP + s * SYS_H;
-    html += `<svg class="score-svg print-system" xmlns="${svgNS}" viewBox="0 ${top} ${PRINT_W} ${SYS_H}">${out}</svg>`;
+    const top = PAD_TOP + s * L.sysH;
+    html += `<svg class="score-svg print-system" xmlns="${svgNS}" viewBox="0 ${top} ${PRINT_W} ${L.sysH}">${out}</svg>`;
   });
   printArea.innerHTML = html;
 }
@@ -642,8 +828,10 @@ function updateControls() {
 }
 
 function statusText() {
+  if (state.notice) return `<b>✓ ${escapeHtml(state.notice)}</b>`;
+  if (state.lyricId != null) return '<b>Typing lyrics</b> · Tab moves to the next note · Esc goes back to writing notes';
   const n = state.notes.length;
-  if (!n) return 'Empty sheet. Choose a note length above, then click on the staff.';
+  if (!n) return 'Empty sheet. Choose a note length above, then click on the staff. Click under a note to add its lyric.';
   const total = state.notes.reduce((s, x) => s + ticksOf(x), 0);
   const beats = total / state.beatTicks;
   const unit = $('beat-unit').selectedOptions[0].textContent.toLowerCase();
@@ -717,6 +905,7 @@ function toggleRestMode() {
     pushHistory();
     sel.rest = state.restMode;
     sel.acc = 0;
+    if (sel.rest) sel.lyric = null;
   }
   render();
 }
@@ -747,6 +936,7 @@ function deleteNote(direction) {
   if (idx < 0) idx = direction < 0 ? state.cursor - 1 : state.cursor;
   if (idx < 0 || idx >= state.notes.length) return;
   pushHistory();
+  if (state.notes[idx].id === state.lyricId) state.lyricId = null;
   state.notes.splice(idx, 1);
   state.cursor = idx;
   state.selectedId = null;
@@ -810,8 +1000,10 @@ function svgPoint(e) {
 }
 
 function systemAt(y) {
-  return clamp(Math.floor((y - PAD_TOP) / SYS_H), 0, layout.lines.length - 1);
+  return clamp(Math.floor((y - PAD_TOP) / layout.sysH), 0, layout.lines.length - 1);
 }
+
+const inLyricZone = (p) => p.y >= layout.lines[systemAt(p.y)].staffTop + LYRIC_ZONE;
 
 function stepAt(y, staffTop) {
   return clamp(Math.round((staffTop + 40 - y) / HALF) + E4, MIN_STEP, MAX_STEP);
@@ -859,6 +1051,14 @@ function drawGhost(x, y) {
 svg.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
   const p = svgPoint(e);
+  e.preventDefault();   // keep the keyboard focus where it is (the lyric input)
+  if (inLyricZone(p)) {
+    const slot = lyricSlotAt(systemAt(p.y), p.x);
+    if (slot) editLyric(slot, lyricIndexAt(slot, p.x));
+    else stopLyrics();
+    return;
+  }
+  stopLyrics();
   const hit = hitItem(p.x, p.y);
   if (hit) {
     select(hit.note);
@@ -887,6 +1087,11 @@ svg.addEventListener('pointermove', (e) => {
     return;
   }
   if (e.pointerType === 'touch') return;
+  if (inLyricZone(p)) {
+    svg.style.cursor = 'text';
+    ghostG.innerHTML = '';
+    return;
+  }
   const hit = hitItem(p.x, p.y);
   svg.style.cursor = hit ? (hit.note.rest ? 'pointer' : 'ns-resize') : 'crosshair';
   if (hit) ghostG.innerHTML = '';
@@ -897,6 +1102,118 @@ const endDrag = () => { drag = null; };
 svg.addEventListener('pointerup', endDrag);
 svg.addEventListener('pointercancel', endDrag);
 svg.addEventListener('pointerleave', () => { if (!drag) ghostG.innerHTML = ''; });
+
+/* =====================================================================
+   Typing lyrics (a hidden input receives the typing, so phone and tablet
+   keyboards and accented characters work too)
+   ===================================================================== */
+
+const lyricInput = document.getElementById('lyric-input');
+
+function editSlot(L = layout) {
+  return state.lyricId == null || !L ? null : L.lyrics.find((s) => s.note.id === state.lyricId) || null;
+}
+
+function editLyric(slot, caret) {
+  state.lyricId = slot.note.id;
+  state.lyricCaret = clamp(caret, 0, slotText(slot).length);
+  state.selectedId = null;
+  lyricPushed = false;
+  if (document.activeElement !== lyricInput) lyricInput.focus({ preventScroll: true });
+  render();
+}
+
+function stopLyrics() {
+  if (state.lyricId == null) return;
+  state.lyricId = null;
+  if (document.activeElement === lyricInput) lyricInput.blur();
+  render();
+}
+
+// Moves to the lyric of the next (+1) or previous (-1) sung note.
+function moveLyric(dir, toStart) {
+  const slot = editSlot();
+  if (!slot) return;
+  const to = layout.lyrics[layout.lyrics.indexOf(slot) + dir];
+  if (to) editLyric(to, toStart ? 0 : slotText(to).length);
+}
+
+function setLyric(note, text, caret) {
+  const clean = cleanLyric(text);
+  if (clean === note.lyric) { state.lyricCaret = caret; render(); return; }
+  if (!lyricPushed) { pushHistory(); lyricPushed = true; }
+  note.lyric = clean;
+  state.lyricCaret = clamp(caret, 0, (clean || '').length);
+  render();
+}
+
+// Types text at the cursor. The notes move apart to make room; only text
+// wider than the staff (or longer than MAX_LYRIC) is left out.
+function insertLyricText(s) {
+  const slot = editSlot();
+  if (!slot) return;
+  s = s.replace(/[\r\n\t]/g, ' ');
+  let text = slotText(slot);
+  let i = clamp(state.lyricCaret, 0, text.length);
+  const maxW = layout.W - RIGHT - STAFF_X - 2 * LYRIC_GAP;
+  for (const c of s) {
+    const next = text.slice(0, i) + c + text.slice(i);
+    if (next.length > MAX_LYRIC || lyricWidth(lyricBody(next)) > maxW) break;
+    text = next;
+    i += c.length;
+  }
+  setLyric(slot.note, text, i);
+}
+
+lyricInput.addEventListener('input', () => {
+  const v = lyricInput.value;
+  lyricInput.value = '';
+  if (v) insertLyricText(v);
+});
+
+lyricInput.addEventListener('keydown', (e) => {
+  const slot = editSlot();
+  if (!slot) return;
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl) { if (handleCtrlKey(e)) e.preventDefault(); return; }
+  const text = slotText(slot);
+  const i = clamp(state.lyricCaret, 0, text.length);
+  switch (e.key) {
+    case 'Escape':
+    case 'Enter':
+      stopLyrics();
+      break;
+    case 'Tab':
+      moveLyric(e.shiftKey ? -1 : 1, false);
+      break;
+    case 'Backspace':
+      if (i > 0) setLyric(slot.note, text.slice(0, i - 1) + text.slice(i), i - 1);
+      else moveLyric(-1, false);
+      break;
+    case 'Delete':
+      if (i < text.length) setLyric(slot.note, text.slice(0, i) + text.slice(i + 1), i);
+      break;
+    case 'ArrowLeft':
+      if (i > 0) { state.lyricCaret = i - 1; render(); } else moveLyric(-1, false);
+      break;
+    case 'ArrowRight':
+      if (i < text.length) { state.lyricCaret = i + 1; render(); } else moveLyric(1, true);
+      break;
+    case 'Home': state.lyricCaret = 0; render(); break;
+    case 'End': state.lyricCaret = text.length; render(); break;
+    case 'ArrowUp':
+    case 'ArrowDown':
+      break; // nothing above or below a lyric
+    default:
+      return; // a character: it arrives through the input event
+  }
+  e.preventDefault();
+});
+
+// Clicking elsewhere (a toolbar button, the title) ends lyric typing.
+lyricInput.addEventListener('blur', () => {
+  setTimeout(() => { if (document.activeElement !== lyricInput) stopLyrics(); }, 0);
+});
 
 /* =====================================================================
    Sound
@@ -975,6 +1292,255 @@ function stopPlayback() {
 }
 
 /* =====================================================================
+   Sheet files (.smusic), the same format as the Windows app
+   ===================================================================== */
+
+const FILE_EXT = '.smusic';
+const FORMAT_VERSION = 1;
+const DUR_FILE = { w: 'W', h: 'H', q: 'Q', e: 'E', s: 'S' };
+let fileHandle = null;   // where "Save" writes, when the browser can save to a chosen file
+
+function sheetJson() {
+  const notes = state.notes.map((n) => {
+    const o = { Id: n.id, Rest: !!n.rest, Dur: DUR_FILE[n.dur], Dot: !!n.dot, Step: n.step, Acc: n.acc || 0 };
+    if (!n.rest && n.lyric) o.Lyric = n.lyric;
+    return o;
+  });
+  return JSON.stringify({
+    App: 'SimpleMusic', FormatVersion: FORMAT_VERSION,
+    Sheet: {
+      Title: state.title, Notes: notes, Barred: state.barred, Beats: state.beats,
+      BeatTicks: state.beatTicks, FillLast: state.fillLast, Tempo: state.tempo,
+    },
+  }, null, 2);
+}
+
+const isDirty = () => state.savedJson == null ? state.notes.length > 0 : sheetJson() !== state.savedJson;
+const displayFileName = () => (state.fileName || 'Untitled').replace(/\.smusic$/i, '');
+
+// Reads a .smusic file; throws an Error with a friendly message if it isn't one.
+function readSheet(text) {
+  let file;
+  try { file = JSON.parse(text); } catch (e) { throw new Error("This file isn't a Simple Music Melody sheet, or it is damaged."); }
+  if (!file || file.App !== 'SimpleMusic' || !file.Sheet) throw new Error("This file isn't a Simple Music Melody sheet.");
+  if (file.FormatVersion > FORMAT_VERSION) throw new Error('This sheet was made with a newer version of Simple Music Melody.');
+  const s = file.Sheet;
+  const durOf = (d) => (typeof d === 'string' ? d.toLowerCase() : DUR_ORDER[d]);
+  let id = 1;
+  const notes = (Array.isArray(s.Notes) ? s.Notes : [])
+    .map((n) => ({
+      id: id++, rest: !!n.Rest, dur: durOf(n.Dur), dot: !!n.Dot,
+      step: Number.isInteger(n.Step) ? n.Step : B4, acc: clamp(n.Acc | 0, -1, 1), lyric: n.Rest ? null : cleanLyric(n.Lyric),
+    }))
+    .filter((n) => BASE_TICKS[n.dur] && n.step >= MIN_STEP && n.step <= MAX_STEP)
+    .map((n) => ({ ...n, dot: n.dot && n.dur !== 's' }));
+  // Older sheets kept the lyrics as one free text: give each sung note one syllable.
+  if (typeof s.Lyrics === 'string' && s.Lyrics.trim() && notes.every((n) => !n.lyric)) {
+    const syllables = [];
+    for (const word of s.Lyrics.split(/\s+/).filter(Boolean)) {
+      const parts = word.split('-').filter(Boolean);
+      parts.forEach((p, i) => syllables.push(i < parts.length - 1 ? p + '-' : p));
+    }
+    const sung = notes.filter((n) => !n.rest);
+    sung.forEach((n, i) => { if (i < syllables.length) n.lyric = cleanLyric(syllables[i]); });
+    if (sung.length && syllables.length > sung.length) {
+      sung[sung.length - 1].lyric = cleanLyric(syllables.slice(sung.length - 1).join(' ').replace(/- /g, '-'));
+    }
+  }
+  return {
+    notes,
+    title: typeof s.Title === 'string' ? s.Title.slice(0, 120) : '',
+    barred: !!s.Barred,
+    beats: clamp(s.Beats | 0 || 4, 1, 16),
+    beatTicks: [32, 24, 16, 12, 8, 6, 4, 2].includes(s.BeatTicks) ? s.BeatTicks : 8,
+    fillLast: s.FillLast !== false,
+    tempo: clamp(s.Tempo | 0 || 90, 40, 200),
+  };
+}
+
+// Puts a sheet on the page; `baseline` is what it looked like when last saved.
+function attachSheet(sheet, fileName, handle) {
+  stopPlayback();
+  state.lyricId = null;
+  state.notes = sheet.notes;
+  state.title = sheet.title;
+  state.barred = sheet.barred;
+  state.beats = sheet.beats;
+  state.beatTicks = sheet.beatTicks;
+  state.fillLast = sheet.fillLast;
+  state.tempo = sheet.tempo;
+  state.cursor = state.notes.length;
+  state.selectedId = null;
+  state.fileName = fileName;
+  fileHandle = handle || null;
+  nextId = state.notes.reduce((m, n) => Math.max(m, n.id), 0) + 1;
+  undoStack.length = 0;
+  redoStack.length = 0;
+  $('title').value = state.title;
+  state.savedJson = sheetJson();
+  render();
+}
+
+// Unsaved changes? Ask before they are replaced.
+function okToDiscard() {
+  if (!isDirty()) return true;
+  return confirm(`${displayFileName()} has changes that aren't saved. Continue without saving them?`);
+}
+
+function newSheet() {
+  if (!okToDiscard()) return;
+  attachSheet({ notes: [], title: '', barred: false, beats: state.beats, beatTicks: state.beatTicks, fillLast: state.fillLast, tempo: state.tempo }, null, null);
+}
+
+async function openSheet() {
+  if (!okToDiscard()) return;
+  try {
+    if (window.showOpenFilePicker) {
+      const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Simple Music Melody sheet', accept: { 'application/json': [FILE_EXT] } }] });
+      const file = await handle.getFile();
+      attachSheet(readSheet(await file.text()), file.name, handle);
+    } else {
+      $('file-input').click();   // continues in the change handler below
+    }
+  } catch (e) {
+    if (e.name !== 'AbortError') alert(e.message);
+  }
+}
+
+$('file-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try { attachSheet(readSheet(await file.text()), file.name, null); } catch (err) { alert(`${file.name} could not be opened:\n${err.message}`); }
+});
+
+const safeName = (s) => s.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'Untitled';
+
+// Downloads a file the browser way (when it can't save to a chosen file).
+function download(name, blob) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function saveSheet(saveAs) {
+  stopLyrics();
+  const json = sheetJson();
+  const suggested = state.fileName || `${safeName(sheetTitle())}${FILE_EXT}`;
+  try {
+    if (window.showSaveFilePicker) {
+      if (saveAs || !fileHandle) {
+        fileHandle = await window.showSaveFilePicker({ suggestedName: suggested, types: [{ description: 'Simple Music Melody sheet', accept: { 'application/json': [FILE_EXT] } }] });
+      }
+      const w = await fileHandle.createWritable();
+      await w.write(json);
+      await w.close();
+      state.fileName = fileHandle.name;
+    } else {
+      download(suggested, new Blob([json], { type: 'application/json' }));
+      state.fileName = suggested;
+    }
+    state.savedJson = json;
+    showNotice(`Saved ${state.fileName}`);
+  } catch (e) {
+    if (e.name !== 'AbortError') alert(`The sheet could not be saved:\n${e.message}`);
+  }
+}
+
+function showNotice(text) {
+  state.notice = text;
+  render();
+  state.notice = null;   // gone with the next change
+}
+
+/* ---------------- MIDI export (Standard MIDI File, format 0, piano) ---------------- */
+
+function midiBytes() {
+  const PER_QUARTER = 480, PER_TICK = PER_QUARTER / 8, VELOCITY = 80;
+  const track = [];
+  const varLen = (v) => {
+    const out = [v & 0x7f];
+    while ((v >>= 7) > 0) out.unshift((v & 0x7f) | 0x80);
+    return out;
+  };
+  const utf8 = (s) => Array.from(new TextEncoder().encode(s));
+  const meta = (type, data) => track.push(0, 0xff, type, ...varLen(data.length), ...data);
+
+  meta(0x03, utf8(sheetTitle()));                                   // track name
+  // The tempo slider counts beats of the chosen beat note; MIDI wants microseconds per quarter.
+  const us = Math.round((60000000 * 8) / (state.tempo * state.beatTicks));
+  meta(0x51, [(us >> 16) & 0xff, (us >> 8) & 0xff, us & 0xff]);
+  if (state.barred) {
+    const [num, den] = timeSignature();
+    meta(0x58, [num, Math.log2(den), state.beatTicks * 3, 8]);
+  }
+  track.push(0, 0xc0, 0);                                           // acoustic grand piano
+
+  let wait = 0;
+  for (const n of state.notes) {
+    const length = ticksOf(n) * PER_TICK;
+    if (n.rest) { wait += length; continue; }
+    const key = clamp(midiOf(n), 0, 127);
+    if (n.lyric) {
+      // The note's lyric as a lyric event, just before the note sounds.
+      const words = utf8(n.lyric.endsWith('-') ? n.lyric : n.lyric + ' ');
+      track.push(...varLen(wait), 0xff, 0x05, ...varLen(words.length), ...words);
+      wait = 0;
+    }
+    track.push(...varLen(wait), 0x90, key, VELOCITY, ...varLen(length), 0x80, key, 0);
+    wait = 0;
+  }
+  track.push(...varLen(wait), 0xff, 0x2f, 0);                       // end of track (keeps trailing rests)
+
+  const be = (v, n) => Array.from({ length: n }, (_, i) => (v >> (8 * (n - 1 - i))) & 0xff);
+  return new Uint8Array([
+    ...utf8('MThd'), ...be(6, 4), ...be(0, 2), ...be(1, 2), ...be(PER_QUARTER, 2),
+    ...utf8('MTrk'), ...be(track.length, 4), ...track,
+  ]);
+}
+
+function exportMidi() {
+  if (!state.notes.length) { showNotice('Add some notes first'); return; }
+  const name = `${safeName(sheetTitle())}.mid`;
+  download(name, new Blob([midiBytes()], { type: 'audio/midi' }));
+  showNotice(`MIDI saved as ${name}`);
+}
+
+function exportPdf() {
+  stopLyrics();
+  window.print();
+}
+
+// The Export menu: a small list under the button.
+const exportMenu = $('export-menu');
+function toggleExportMenu(open) {
+  const show = open ?? exportMenu.hidden;
+  exportMenu.hidden = !show;
+  $('btn-export').setAttribute('aria-expanded', String(show));
+}
+$('btn-export').addEventListener('click', (e) => { e.stopPropagation(); toggleExportMenu(); });
+$('menu-pdf').addEventListener('click', () => { toggleExportMenu(false); exportPdf(); });
+$('menu-midi').addEventListener('click', () => { toggleExportMenu(false); exportMidi(); });
+document.addEventListener('pointerdown', (e) => { if (!exportMenu.hidden && !e.target.closest('.export-wrap')) toggleExportMenu(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !exportMenu.hidden) toggleExportMenu(false); }, true);
+
+// Ctrl/Cmd shortcuts, shared by the page and the lyric input. Returns true when handled.
+function handleCtrlKey(e) {
+  const k = e.key.toLowerCase();
+  if (k === 'z') { e.shiftKey ? redo() : undo(); return true; }
+  if (k === 'y') { redo(); return true; }
+  if (k === 's') { saveSheet(e.shiftKey); return true; }
+  if (k === 'o') { openSheet(); return true; }
+  if (k === 'm') { exportMidi(); return true; }
+  if (k === 'p') { exportPdf(); return true; }
+  return false;
+}
+
+/* =====================================================================
    Wiring
    ===================================================================== */
 
@@ -989,19 +1555,15 @@ $('btn-play').addEventListener('click', play);
 $('tempo').addEventListener('input', (e) => { state.tempo = +e.target.value; $('tempo-val').textContent = state.tempo; save(); });
 
 $('title').addEventListener('input', (e) => { state.title = e.target.value; save(); });
-$('title').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === 'Escape') e.target.blur(); });
-$('btn-pdf').addEventListener('click', () => window.print());
-
-$('btn-new').addEventListener('click', () => {
-  if (state.notes.length && !confirm('Start a new, empty sheet? (You can still undo this.)')) return;
-  stopPlayback();
-  pushHistory();
-  state.notes = [];
-  state.cursor = 0;
-  state.selectedId = null;
-  state.barred = false;
-  render();
+$('title').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === 'Escape') e.target.blur();
+  else if ((e.ctrlKey || e.metaKey) && 'som'.includes(e.key.toLowerCase()) && handleCtrlKey(e)) e.preventDefault();
 });
+$('btn-new').addEventListener('click', newSheet);
+$('btn-open').addEventListener('click', openSheet);
+$('btn-save').addEventListener('click', () => saveSheet(false));
+$('btn-save-as').addEventListener('click', () => saveSheet(true));
+window.addEventListener('beforeunload', (e) => { if (isDirty() && state.fileName) e.preventDefault(); });
 
 function setBeats(v) {
   state.beats = clamp(Math.round(v) || 1, 1, 16);
@@ -1024,9 +1586,8 @@ document.addEventListener('keydown', (e) => {
   const k = e.key;
   const ctrl = e.ctrlKey || e.metaKey;
 
-  if (ctrl && (k === 'z' || k === 'Z')) { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
-  if (ctrl && (k === 'y' || k === 'Y')) { e.preventDefault(); redo(); return; }
-  if (ctrl || e.altKey) return;
+  if (ctrl) { if (handleCtrlKey(e)) e.preventDefault(); return; }
+  if (e.altKey) return;
 
   if (/^[a-gA-G]$/.test(k)) {
     insertNote(insertIndexForTyping(), stepForLetter(k.toUpperCase()), false);
@@ -1075,6 +1636,7 @@ window.addEventListener('resize', () => {
 });
 
 load();
+if (state.savedJson == null) state.savedJson = sheetJson();   // what was remembered counts as saved
 $('title').value = state.title;
 render();
 if (document.fonts) document.fonts.ready.then(render);

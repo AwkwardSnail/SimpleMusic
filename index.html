@@ -19,9 +19,19 @@
       </div>
     </div>
     <div class="top-actions">
-      <button id="btn-new" class="ghost-btn" title="Start a new, empty sheet">New sheet</button>
-      <button id="btn-pdf" class="ghost-btn" title="Export the sheet as a PDF (choose “Save as PDF” in the print window)">Export PDF</button>
+      <button id="btn-new" class="ghost-btn" title="Start a new, empty sheet">New</button>
+      <button id="btn-open" class="ghost-btn" title="Open a saved sheet (Ctrl+O)">Open…</button>
+      <button id="btn-save" class="ghost-btn" title="Save this sheet (Ctrl+S)">Save</button>
+      <button id="btn-save-as" class="ghost-btn" title="Save a copy under a new name (Ctrl+Shift+S)">Save as…</button>
+      <div class="export-wrap">
+        <button id="btn-export" class="ghost-btn" aria-haspopup="menu" aria-expanded="false" title="Export the sheet as a PDF or a MIDI file">Export ▾</button>
+        <div id="export-menu" class="menu" role="menu" hidden>
+          <button id="menu-pdf" role="menuitem">PDF — to print or share… <kbd>Ctrl+P</kbd></button>
+          <button id="menu-midi" role="menuitem">MIDI — to play in other music apps… <kbd>Ctrl+M</kbd></button>
+        </div>
+      </div>
     </div>
+    <input type="file" id="file-input" accept=".smusic,application/json" hidden>
   </header>
 
   <main>
@@ -137,15 +147,19 @@
         <div><kbd>←</kbd> <kbd>→</kbd> move between notes</div>
         <div><kbd>+</kbd> sharp &nbsp; <kbd>-</kbd> flat</div>
         <div><kbd>Delete</kbd> / <kbd>Backspace</kbd> remove a note</div>
+        <div>Click under a note: type its lyric (<kbd>Tab</kbd> next note, <kbd>Esc</kbd> back to notes)</div>
         <div><kbd>Esc</kbd> deselect</div>
         <div><kbd>Space</kbd> play / stop</div>
         <div><kbd>Ctrl</kbd>+<kbd>Z</kbd> undo, <kbd>Ctrl</kbd>+<kbd>Y</kbd> redo</div>
+        <div><kbd>Ctrl</kbd>+<kbd>O</kbd> open, <kbd>Ctrl</kbd>+<kbd>S</kbd> save (<kbd>Shift</kbd> = save as)</div>
+        <div><kbd>Ctrl</kbd>+<kbd>P</kbd> export PDF, <kbd>Ctrl</kbd>+<kbd>M</kbd> export MIDI</div>
         <div>Drag a note up or down to change its pitch</div>
       </div>
     </details>
   </main>
 
   <div id="print-area"></div>
+  <input id="lyric-input" class="lyric-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Lyric for the selected note">
 
   <script src="app.js"></script>
 </body>

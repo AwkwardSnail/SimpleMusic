@@ -148,6 +148,13 @@ main { max-width: 1180px; margin: 0 auto; padding: 8px 20px 40px; }
 .score-svg .ghost-label-bg { fill: var(--accent-soft); }
 
 .score-svg .beam { fill: var(--ink); }
+.score-svg .lyric { font: 15px Georgia, 'Times New Roman', serif; fill: var(--ink); white-space: pre; }
+.score-svg .lyric-blank { stroke: #c9c4ce; stroke-width: 1.2; }
+.score-svg .lyric-box { fill: none; stroke: #c9c4ce; stroke-width: 1; }
+.score-svg .lyric-caret { stroke-width: 1.6; }
+
+/* Receives lyric typing (including phone keyboards); kept out of sight. */
+.lyric-input { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; pointer-events: none; }
 
 @keyframes blink { to { visibility: hidden; } }
 
@@ -167,7 +174,20 @@ main { max-width: 1180px; margin: 0 auto; padding: 8px 20px 40px; }
 .title-input::placeholder { color: #b9b4bf; }
 .title-input:hover, .title-input:focus { border-bottom-color: var(--line); }
 
-.top-actions { display: flex; gap: 8px; }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.export-wrap { position: relative; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 10;
+  display: flex; flex-direction: column; min-width: 300px; padding: 4px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 9px;
+  box-shadow: 0 8px 24px -12px rgba(40,30,10,.35);
+}
+.menu[hidden] { display: none; }
+.menu button {
+  display: flex; justify-content: space-between; gap: 16px; align-items: center;
+  border: 0; background: transparent; text-align: left; padding: 8px 10px; border-radius: 6px; cursor: pointer;
+}
+.menu button:hover, .menu button:focus-visible { background: var(--accent-soft); }
 
 /* ---------- Print / PDF ---------- */
 #print-area { display: none; }
